@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Public File - {{ file.name }}</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+        
+        body {
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+
+        .glass-card {
+            background: rgba(255, 255, 255, 0.15);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37);
+        }
+
+        .floating {
+            animation: floating 3s ease-in-out infinite;
+        }
+
+        @keyframes floating {
+            0% { transform: translateY(0px); }
+            50% { transform: translateY(-10px); }
+            100% { transform: translateY(0px); }
+        }
+
+        .btn-gradient {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            transition: all 0.3s ease;
+        }
+
+        .btn-gradient:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(102, 126, 234, 0.3);
+        }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen flex items-center justify-center p-4">
+    <div class="glass-card rounded-3xl p-8 max-w-md w-full transform transition-all duration-500 hover:scale-105">
+        <div class="text-center">
+            <!-- File Icon -->
+            <div class="floating mb-6">
+                <div class="w-20 h-20 rounded-2xl bg-gradient-to-br from-blue-400 to-purple-600 flex items-center justify-center shadow-2xl mx-auto">
+                    <i class="fas fa-file text-white text-2xl"></i>
+                </div>
+            </div>
+            
+            <!-- File Info -->
+            <h1 class="text-2xl font-bold text-gray-800 mb-2">{{ file.name }}</h1>
+            <p class="text-gray-600 mb-4">
+                {{ file.size|filesizeformat }} • {{ file.file_type|upper }}
+            </p>
+            <p class="text-sm text-gray-500 mb-6 flex items-center justify-center space-x-2">
+                <i class="fas fa-user text-blue-400"></i>
+                <span>Uploaded by {{ file.owner.username }}</span>
+            </p>
+            
+            <!-- Download Button -->
+            <a href="{{ download_url }}" 
+               class="btn-gradient text-white px-8 py-4 rounded-2xl font-semibold shadow-lg hover:shadow-xl transition-all duration-300 inline-flex items-center space-x-3 mb-4">
+                <i class="fas fa-download"></i>
+                <span>Download File</span>
+            </a>
+            
+            <!-- Public Access Info -->
+            <div class="text-xs text-gray-500 mt-6 bg-white/30 backdrop-blur-sm rounded-2xl p-4 border border-white/40">
+                <div class="flex items-center justify-center space-x-2 mb-2">
+                    <i class="fas fa-globe-americas text-green-500"></i>
+                    <span class="font-semibold text-green-600">Public File Access</span>
+                </div>
+                <p>This file is publicly accessible. Anyone with this link can download it.</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Add button hover effect
+            const downloadBtn = document.querySelector('.btn-gradient');
+            if (downloadBtn) {
+                downloadBtn.addEventListener('mouseenter', function() {
+                    this.style.transform = 'translateY(-2px) scale(1.05)';
+                });
+                
+                downloadBtn.addEventListener('mouseleave', function() {
+                    this.style.transform = 'translateY(0px) scale(1)';
+                });
+            }
+
+            // Add card hover effect
+            const card = document.querySelector('.glass-card');
+            if (card) {
+                card.addEventListener('mouseenter', function() {
+                    this.style.transform = 'scale(1.05) rotate(1deg)';
+                });
+                
+                card.addEventListener('mouseleave', function() {
+                    this.style.transform = 'scale(1) rotate(0deg)';
+                });
+            }
+        });
+    </script>
+</body>
+</html>

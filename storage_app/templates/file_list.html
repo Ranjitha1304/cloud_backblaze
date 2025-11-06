@@ -1,0 +1,957 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <!-- Page Header -->
+    <div class="glass-card rounded-2xl mb-8 transform transition-all duration-300 hover:scale-[1.01]">
+        <div class="px-6 py-8">
+            <div class="flex justify-between items-center mb-6">
+                <div>
+                    <h1 class="text-3xl font-bold text-gray-800 mb-2">My Files</h1>
+                    <!-- Breadcrumbs -->
+                    <nav class="flex" aria-label="Breadcrumb">
+                        <ol class="flex items-center space-x-3">
+                            <li>
+                                <a href="{% url 'file_list' %}" class="text-gray-500 hover:text-gray-700 transition-colors">
+                                    <i class="fas fa-home"></i>
+                                </a>
+                            </li>
+                            {% if current_folder %}
+                                <li class="flex items-center">
+                                    <span class="text-gray-400 mx-2">/</span>
+                                    <span class="text-gray-700 font-medium">{{ current_folder.name }}</span>
+                                </li>
+                            {% endif %}
+                        </ol>
+                    </nav>
+                </div>
+                <div class="flex space-x-4">
+                    <!-- Create Folder Button -->
+                    <button onclick="showCreateFolderModal()" 
+                            class="btn-gradient text-white px-6 py-3 rounded-xl font-semibold shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105 flex items-center space-x-2">
+                        <i class="fas fa-folder-plus"></i>
+                        <span>New Folder</span>
+                    </button>
+                    <a href="{% url 'dashboard' %}" 
+                       class="bg-gray-600 text-white px-6 py-3 rounded-xl font-semibold shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105 flex items-center space-x-2">
+                        <i class="fas fa-arrow-left"></i>
+                        <span>Dashboard</span>
+                    </a>
+                </div>
+            </div>
+
+            <!-- Search Bar -->
+            <div class="mt-6">
+                <div class="relative">
+                    <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                        <i class="fas fa-search text-gray-400 text-lg"></i>
+                    </div>
+                    <input type="text" 
+                           id="searchInput"
+                           class="block w-full pl-12 pr-12 py-4 border-0 bg-white/80 rounded-2xl text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-4 focus:ring-blue-200 focus:bg-white transition-all duration-300 shadow-lg"
+                           placeholder="Search files and folders..."
+                           onkeyup="performSearch()">
+                    <div class="absolute inset-y-0 right-0 pr-4 flex items-center">
+                        <button onclick="clearSearch()" 
+                                class="text-gray-400 hover:text-gray-600 transition-colors hidden transform hover:scale-110"
+                                id="clearSearchBtn">
+                            <i class="fas fa-times text-lg"></i>
+                        </button>
+                    </div>
+                </div>
+                <div id="searchResultsInfo" class="mt-3 text-sm text-gray-600 hidden bg-white/50 rounded-xl p-3"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Search Results or Normal View -->
+    <div id="normalView">
+        <!-- Folders List -->
+        {% if folders %}
+        <div class="glass-card rounded-2xl mb-8 transform transition-all duration-300 hover:scale-[1.01]">
+            <div class="px-6 py-6 border-b border-gray-200/50">
+                <h2 class="text-xl font-bold text-gray-800 flex items-center space-x-3">
+                    <i class="fas fa-folder text-yellow-500"></i>
+                    <span>Folders</span>
+                </h2>
+            </div>
+            <div class="p-6">
+                <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6" id="foldersContainer">
+                    {% for folder in folders %}
+                    <div class="folder-item bg-white/80 rounded-2xl p-5 border-2 border-transparent hover:border-yellow-300 transition-all duration-300 transform hover:scale-105 group cursor-pointer shadow-lg hover:shadow-xl">
+                        <a href="{% url 'file_list_folder' folder.id %}" class="block">
+                            <div class="flex items-center justify-between">
+                                <div class="flex items-center flex-1">
+                                    <div class="w-12 h-12 bg-yellow-100 rounded-xl flex items-center justify-center group-hover:bg-yellow-200 transition-colors mr-4">
+                                        <i class="fas fa-folder text-yellow-600 text-xl"></i>
+                                    </div>
+                                    <div class="flex-1 min-w-0">
+                                        <p class="text-sm font-semibold text-gray-900 truncate group-hover:text-yellow-600 transition-colors folder-name">
+                                            {{ folder.name }}
+                                        </p>
+                                        <p class="text-xs text-gray-500 mt-1">
+                                            {{ folder.get_files_count }} file{{ folder.get_files_count|pluralize }}, 
+                                            {{ folder.get_subfolders_count }} folder{{ folder.get_subfolders_count|pluralize }}
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+                        </a>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Files List -->
+        <div class="glass-card rounded-2xl">
+            <div class="px-6 py-6 border-b border-gray-200/50 flex justify-between items-center">
+                <h2 class="text-xl font-bold text-gray-800 flex items-center space-x-3">
+                    <i class="fas fa-file text-blue-500"></i>
+                    <span>{% if current_folder %}Files in {{ current_folder.name }}{% else %}All Files{% endif %}</span>
+                </h2>
+                <span class="text-sm font-medium text-gray-600 bg-white/50 rounded-full px-4 py-2" id="filesCount">
+                    {{ files|length }} file{{ files|length|pluralize }}
+                </span>
+            </div>
+            
+            <div class="px-6 py-6">
+                {% if files %}
+                <div class="overflow-x-auto rounded-2xl">
+                    <table class="min-w-full divide-y divide-gray-200/50">
+                        <thead class="bg-white/80">
+                            <tr>
+                                <th scope="col" class="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                                    File
+                                </th>
+                                <th scope="col" class="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                                    Type
+                                </th>
+                                <th scope="col" class="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                                    Size
+                                </th>
+                                <th scope="col" class="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                                    Uploaded
+                                </th>
+                                <th scope="col" class="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                                    Actions
+                                </th>
+                            </tr>
+                        </thead>
+                        <tbody class="bg-white/50 divide-y divide-gray-200/30" id="filesContainer">
+                            {% for file in files %}
+                            <tr class="file-item hover:bg-white/80 transition-all duration-300 group">
+                                <td class="px-6 py-5 whitespace-nowrap">
+                                    <div class="flex items-center space-x-4">
+                                        <div class="w-10 h-10 rounded-xl bg-gradient-to-br 
+                                            {% if file.file_type == '.pdf' %}from-red-400 to-red-600
+                                            {% elif file.file_type in '.doc,.docx' %}from-blue-400 to-blue-600
+                                            {% elif file.file_type in '.xls,.xlsx' %}from-green-400 to-green-600
+                                            {% elif file.file_type in '.jpg,.jpeg,.png,.gif,.bmp' %}from-purple-400 to-purple-600
+                                            {% elif file.file_type in '.mp4,.avi,.mov' %}from-orange-400 to-orange-600
+                                            {% elif file.file_type in '.mp3,.wav' %}from-yellow-400 to-yellow-600
+                                            {% elif file.file_type in '.zip,.rar,.7z' %}from-gray-400 to-gray-600
+                                            {% else %}from-gray-400 to-gray-600{% endif %} 
+                                            flex items-center justify-center shadow-md">
+                                            <i class="fas 
+                                                {% if file.file_type == '.pdf' %}fa-file-pdf
+                                                {% elif file.file_type in '.doc,.docx' %}fa-file-word
+                                                {% elif file.file_type in '.xls,.xlsx' %}fa-file-excel
+                                                {% elif file.file_type in '.jpg,.jpeg,.png,.gif,.bmp' %}fa-file-image
+                                                {% elif file.file_type in '.mp4,.avi,.mov' %}fa-file-video
+                                                {% elif file.file_type in '.mp3,.wav' %}fa-file-audio
+                                                {% elif file.file_type in '.zip,.rar,.7z' %}fa-file-archive
+                                                {% else %}fa-file{% endif %} 
+                                                text-white text-sm">
+                                            </i>
+                                        </div>
+                                        <div class="flex-1 min-w-0">
+                                            <div class="flex items-center space-x-2 mb-1">
+                                                <span class="file-name text-sm font-semibold text-gray-900 truncate max-w-xs">
+                                                    {{ file.name }}
+                                                </span>
+                                                <div class="flex space-x-1">
+                                                    <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-semibold bg-blue-100 text-blue-800 shadow-sm">
+                                                        <i class="fas fa-cloud mr-1 text-xs"></i>Cloud
+                                                    </span>
+                                                    {% if file.is_public %}
+                                                        <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-800 shadow-sm">
+                                                            <i class="fas fa-globe-americas mr-1 text-xs"></i>Public
+                                                        </span>
+                                                    {% else %}
+                                                        <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-semibold bg-gray-100 text-gray-800 shadow-sm">
+                                                            <i class="fas fa-lock mr-1 text-xs"></i>Private
+                                                        </span>
+                                                    {% endif %}
+                                                </div>
+                                            </div>
+                                            <p class="text-xs text-gray-500">ID: {{ file.id }}</p>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td class="px-6 py-5 whitespace-nowrap">
+                                    <span class="file-type text-sm font-medium text-gray-600 uppercase bg-gray-100 rounded-full px-3 py-1">
+                                        {{ file.file_type|default:"Unknown" }}
+                                    </span>
+                                </td>
+                                <td class="px-6 py-5 whitespace-nowrap">
+                                    <span class="file-size text-sm font-semibold text-gray-700">{{ file.size|filesizeformat }}</span>
+                                </td>
+                                <td class="px-6 py-5 whitespace-nowrap">
+                                    <span class="file-uploaded text-sm text-gray-600">{{ file.uploaded_at|date:"M d, Y H:i" }}</span>
+                                </td>
+                                <td class="px-6 py-5 whitespace-nowrap">
+                                    <div class="flex space-x-2">
+                                        <!-- Download Button -->
+                                        <a href="{% url 'download_file' file.id %}" 
+                                           class="w-10 h-10 bg-blue-100 rounded-xl flex items-center justify-center text-blue-600 hover:bg-blue-200 transition-all duration-200 transform hover:scale-110 group"
+                                           title="Download">
+                                            <i class="fas fa-download group-hover:animate-bounce"></i>
+                                        </a>
+                                        
+                                        <!-- Public/Private Toggle Button -->
+                                        <button onclick="toggleFileVisibility('{{ file.id }}')" 
+                                                class="w-10 h-10 rounded-xl flex items-center justify-center transition-all duration-200 transform hover:scale-110 group
+                                                    {% if file.is_public %}bg-green-100 text-green-600 hover:bg-green-200{% else %}bg-gray-100 text-gray-600 hover:bg-gray-200{% endif %}"
+                                                title="{% if file.is_public %}Make Private{% else %}Make Public{% endif %}">
+                                            <i class="fas {% if file.is_public %}fa-globe-americas{% else %}fa-lock{% endif %} group-hover:animate-pulse"></i>
+                                        </button>
+                                        
+                                        <!-- Copy Public Link Button -->
+                                        {% if file.is_public %}
+                                        <button onclick="copyPublicLink('{{ file.id }}')" 
+                                                class="w-10 h-10 bg-blue-100 rounded-xl flex items-center justify-center text-blue-600 hover:bg-blue-200 transition-all duration-200 transform hover:scale-110 group"
+                                                title="Copy Public Link">
+                                            <i class="fas fa-link group-hover:animate-pulse"></i>
+                                        </button>
+                                        {% endif %}
+                                        
+                                        <!-- Move to Folder Button -->
+                                        <button onclick="showMoveFileModal('{{ file.id }}', '{{ file.name }}')" 
+                                                class="w-10 h-10 bg-purple-100 rounded-xl flex items-center justify-center text-purple-600 hover:bg-purple-200 transition-all duration-200 transform hover:scale-110 group"
+                                                title="Move to Folder">
+                                            <i class="fas fa-folder group-hover:animate-bounce"></i>
+                                        </button>
+                                        
+                                        <!-- Share Button -->
+                                        <button onclick="showShareModal('{{ file.id }}', '{{ file.name }}')" 
+                                                class="w-10 h-10 bg-green-100 rounded-xl flex items-center justify-center text-green-600 hover:bg-green-200 transition-all duration-200 transform hover:scale-110 group"
+                                                title="Share">
+                                            <i class="fas fa-share-alt group-hover:animate-pulse"></i>
+                                        </button>
+                                        
+                                        <!-- Delete Button -->
+                                        <button onclick="deleteFile('{{ file.id }}')" 
+                                                class="w-10 h-10 bg-red-100 rounded-xl flex items-center justify-center text-red-600 hover:bg-red-200 transition-all duration-200 transform hover:scale-110 group"
+                                                title="Delete">
+                                            <i class="fas fa-trash group-hover:animate-pulse"></i>
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <!-- Empty State -->
+                <div class="text-center py-16">
+                    <div class="floating mb-6">
+                        <i class="fas fa-folder-open text-8xl text-gray-300"></i>
+                    </div>
+                    <h3 class="text-2xl font-bold text-gray-700 mb-4">
+                        {% if current_folder %}No files in this folder{% else %}No files yet{% endif %}
+                    </h3>
+                    <p class="text-gray-500 text-lg mb-8 max-w-md mx-auto">
+                        {% if current_folder %}
+                            Files you move to this folder will appear here.
+                        {% else %}
+                            Upload your first file to get started with your cloud storage journey.
+                        {% endif %}
+                    </p>
+                    <a href="{% url 'dashboard' %}" 
+                       class="btn-gradient text-white px-8 py-4 rounded-xl font-semibold text-lg shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105 inline-flex items-center space-x-3">
+                        <i class="fas fa-upload"></i>
+                        <span>Upload Files</span>
+                    </a>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Search Results View -->
+    <div id="searchResultsView" class="hidden">
+        <div class="glass-card rounded-2xl">
+            <div class="px-6 py-6 border-b border-gray-200/50">
+                <h2 class="text-xl font-bold text-gray-800 flex items-center space-x-3">
+                    <i class="fas fa-search text-blue-500"></i>
+                    <span>Search Results</span>
+                </h2>
+            </div>
+            <div class="p-6">
+                <!-- Search Results Folders -->
+                <div id="searchFoldersResults" class="mb-8">
+                    <h3 class="text-lg font-semibold text-gray-800 mb-4 flex items-center space-x-2">
+                        <i class="fas fa-folder text-yellow-500"></i>
+                        <span>Folders</span>
+                    </h3>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6" id="searchFoldersContainer">
+                        <!-- Search results will be populated here by JavaScript -->
+                    </div>
+                    <div id="noFoldersResults" class="text-center py-8 hidden">
+                        <i class="fas fa-folder-open text-6xl text-gray-300 mb-4"></i>
+                        <p class="text-gray-500 text-lg">No folders found</p>
+                    </div>
+                </div>
+
+                <!-- Search Results Files -->
+                <div id="searchFilesResults">
+                    <h3 class="text-lg font-semibold text-gray-800 mb-4 flex items-center space-x-2">
+                        <i class="fas fa-file text-blue-500"></i>
+                        <span>Files</span>
+                    </h3>
+                    <div class="overflow-x-auto rounded-2xl">
+                        <table class="min-w-full divide-y divide-gray-200/50">
+                            <thead class="bg-white/80">
+                                <tr>
+                                    <th scope="col" class="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                                        File
+                                    </th>
+                                    <th scope="col" class="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                                        Type
+                                    </th>
+                                    <th scope="col" class="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                                        Size
+                                    </th>
+                                    <th scope="col" class="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                                        Uploaded
+                                    </th>
+                                    <th scope="col" class="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                                        Actions
+                                    </th>
+                                </tr>
+                            </thead>
+                            <tbody class="bg-white/50 divide-y divide-gray-200/30" id="searchFilesContainer">
+                                <!-- Search results will be populated here by JavaScript -->
+                            </tbody>
+                        </table>
+                    </div>
+                    <div id="noFilesResults" class="text-center py-12 hidden">
+                        <i class="fas fa-file text-6xl text-gray-300 mb-4"></i>
+                        <p class="text-gray-500 text-lg">No files found</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Enhanced Modals -->
+<!-- Create Folder Modal -->
+<div id="createFolderModal" class="fixed inset-0 bg-black/50 backdrop-blur-sm overflow-y-auto h-full w-full hidden z-50 transition-opacity duration-300">
+    <div class="relative top-20 mx-auto p-5 w-96 modal-enter">
+        <div class="glass-card rounded-2xl shadow-2xl border border-white/20">
+            <div class="p-6">
+                <div class="flex items-center justify-between mb-6">
+                    <h3 class="text-xl font-bold text-gray-800">Create New Folder</h3>
+                    <button onclick="hideCreateFolderModal()" 
+                            class="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center text-gray-600 hover:bg-gray-200 transition-colors">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                
+                <form id="createFolderForm">
+                    {% csrf_token %}
+                    <div class="mb-6">
+                        <label class="block text-sm font-medium text-gray-700 mb-3">Folder Name</label>
+                        <input type="text" name="name" required
+                               class="w-full px-4 py-3 bg-white/80 border-0 rounded-xl text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-4 focus:ring-blue-200 focus:bg-white transition-all duration-300 shadow-lg"
+                               placeholder="Enter folder name">
+                    </div>
+                    
+                    <div class="flex justify-end space-x-3">
+                        <button type="button" onclick="hideCreateFolderModal()" 
+                                class="px-6 py-3 bg-gray-500 text-white rounded-xl font-semibold hover:bg-gray-600 transition-all duration-200 transform hover:scale-105">
+                            Cancel
+                        </button>
+                        <button type="submit" 
+                                class="btn-gradient px-6 py-3 text-white rounded-xl font-semibold shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-105">
+                            Create Folder
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Move File Modal -->
+<div id="moveFileModal" class="fixed inset-0 bg-black/50 backdrop-blur-sm overflow-y-auto h-full w-full hidden z-50 transition-opacity duration-300">
+    <div class="relative top-20 mx-auto p-5 w-96 modal-enter">
+        <div class="glass-card rounded-2xl shadow-2xl border border-white/20">
+            <div class="p-6">
+                <div class="flex items-center justify-between mb-6">
+                    <h3 class="text-xl font-bold text-gray-800">Move File</h3>
+                    <button onclick="hideMoveFileModal()" 
+                            class="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center text-gray-600 hover:bg-gray-200 transition-colors">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                
+                <form id="moveFileForm">
+                    {% csrf_token %}
+                    <input type="hidden" id="moveFileId" name="file_id">
+                    
+                    <div class="mb-4">
+                        <p class="text-sm text-gray-600 mb-2">Moving file:</p>
+                        <p class="text-lg font-semibold text-gray-800" id="moveFileName"></p>
+                    </div>
+                    
+                    <div class="mb-6">
+                        <label class="block text-sm font-medium text-gray-700 mb-3">Move to Folder</label>
+                        <select name="folder" class="w-full px-4 py-3 bg-white/80 border-0 rounded-xl text-gray-900 focus:outline-none focus:ring-4 focus:ring-blue-200 focus:bg-white transition-all duration-300 shadow-lg">
+                            <option value="">Root (No Folder)</option>
+                            {% for folder in all_folders %}
+                            <option value="{{ folder.id }}">{{ folder.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    
+                    <div class="flex justify-end space-x-3">
+                        <button type="button" onclick="hideMoveFileModal()" 
+                                class="px-6 py-3 bg-gray-500 text-white rounded-xl font-semibold hover:bg-gray-600 transition-all duration-200 transform hover:scale-105">
+                            Cancel
+                        </button>
+                        <button type="submit" 
+                                class="btn-gradient px-6 py-3 text-white rounded-xl font-semibold shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-105">
+                            Move File
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Share Modal -->
+<div id="shareModal" class="fixed inset-0 bg-black/50 backdrop-blur-sm overflow-y-auto h-full w-full hidden z-50 transition-opacity duration-300">
+    <div class="relative top-20 mx-auto p-5 w-96 modal-enter">
+        <div class="glass-card rounded-2xl shadow-2xl border border-white/20">
+            <div class="p-6">
+                <div class="flex items-center justify-between mb-6">
+                    <h3 class="text-xl font-bold text-gray-800">Share File</h3>
+                    <button onclick="hideShareModal()" 
+                            class="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center text-gray-600 hover:bg-gray-200 transition-colors">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                
+                <form id="shareForm">
+                    {% csrf_token %}
+                    <input type="hidden" id="shareFileId" name="file_id">
+                    
+                    <div class="mb-4">
+                        <p class="text-sm text-gray-600 mb-2">Sharing file:</p>
+                        <p class="text-lg font-semibold text-gray-800" id="shareFileName"></p>
+                    </div>
+                    
+                    <div class="mb-6">
+                        <label class="block text-sm font-medium text-gray-700 mb-3">Link Expires In</label>
+                        <select name="expires_in" class="w-full px-4 py-3 bg-white/80 border-0 rounded-xl text-gray-900 focus:outline-none focus:ring-4 focus:ring-blue-200 focus:bg-white transition-all duration-300 shadow-lg">
+                            <option value="">Never</option>
+                            <option value="1">1 Day</option>
+                            <option value="7">1 Week</option>
+                            <option value="30">1 Month</option>
+                        </select>
+                    </div>
+                    
+                    <div class="flex justify-end space-x-3">
+                        <button type="button" onclick="hideShareModal()" 
+                                class="px-6 py-3 bg-gray-500 text-white rounded-xl font-semibold hover:bg-gray-600 transition-all duration-200 transform hover:scale-105">
+                            Cancel
+                        </button>
+                        <button type="submit" 
+                                class="btn-gradient px-6 py-3 text-white rounded-xl font-semibold shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-105">
+                            Create Share Link
+                        </button>
+                    </div>
+                </form>
+                
+                <div id="shareResult" class="mt-6 hidden">
+                    <label class="block text-sm font-medium text-gray-700 mb-3">Share Link</label>
+                    <div class="flex space-x-3 mb-4">
+                        <input type="text" id="shareLinkOutput" readonly 
+                               class="flex-1 px-4 py-3 bg-white/80 border-0 rounded-xl text-sm text-gray-900 shadow-lg">
+                        <button onclick="copyShareLink()" 
+                                class="px-4 py-3 bg-green-500 text-white rounded-xl font-semibold hover:bg-green-600 transition-all duration-200 transform hover:scale-105">
+                            <i class="fas fa-copy"></i>
+                        </button>
+                    </div>
+                    <div class="text-xs text-gray-500 bg-blue-50/50 rounded-xl p-3">
+                        <i class="fas fa-info-circle mr-2 text-blue-500"></i>
+                        Anyone with this link can access the file
+                    </div>
+                    <button onclick="hideShareModal()" 
+                            class="w-full mt-4 px-6 py-3 btn-gradient text-white rounded-xl font-semibold shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-105">
+                        Done
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // Enhanced search functionality with animations
+    let searchTimeout;
+    let currentSearchTerm = '';
+
+    function performSearch() {
+        const searchTerm = document.getElementById('searchInput').value.trim().toLowerCase();
+        const clearSearchBtn = document.getElementById('clearSearchBtn');
+        
+        // Show/hide clear button with animation
+        if (searchTerm.length > 0) {
+            clearSearchBtn.classList.remove('hidden');
+            setTimeout(() => clearSearchBtn.classList.add('opacity-100'), 10);
+        } else {
+            clearSearchBtn.classList.add('hidden');
+            showNormalView();
+            return;
+        }
+
+        clearTimeout(searchTimeout);
+        
+        searchTimeout = setTimeout(() => {
+            searchFilesAndFolders(searchTerm);
+        }, 300);
+    }
+
+    function clearSearch() {
+        document.getElementById('searchInput').value = '';
+        document.getElementById('clearSearchBtn').classList.add('hidden');
+        document.getElementById('searchResultsInfo').classList.add('hidden');
+        showNormalView();
+    }
+
+    function searchFilesAndFolders(searchTerm) {
+        const normalView = document.getElementById('normalView');
+        const searchResultsView = document.getElementById('searchResultsView');
+        const searchResultsInfo = document.getElementById('searchResultsInfo');
+        
+        // Animate transition
+        normalView.style.opacity = '0';
+        setTimeout(() => {
+            normalView.classList.add('hidden');
+            searchResultsView.classList.remove('hidden');
+            searchResultsView.style.opacity = '0';
+            setTimeout(() => searchResultsView.style.opacity = '1', 50);
+        }, 300);
+        
+        searchFolders(searchTerm);
+        searchFiles(searchTerm);
+        updateSearchInfo(searchTerm);
+    }
+
+    function searchFolders(searchTerm) {
+        const foldersContainer = document.getElementById('searchFoldersContainer');
+        const noFoldersResults = document.getElementById('noFoldersResults');
+        const originalFolderItems = document.querySelectorAll('#foldersContainer .folder-item');
+        
+        let foundFolders = 0;
+        foldersContainer.innerHTML = '';
+        
+        originalFolderItems.forEach(folder => {
+            const folderName = folder.querySelector('.folder-name').textContent.toLowerCase();
+            
+            if (folderName.includes(searchTerm)) {
+                const clone = folder.cloneNode(true);
+                const folderNameElement = clone.querySelector('.folder-name');
+                const originalName = folderNameElement.textContent;
+                const highlightedName = highlightText(originalName, searchTerm);
+                folderNameElement.innerHTML = highlightedName;
+                
+                foldersContainer.appendChild(clone);
+                foundFolders++;
+            }
+        });
+        
+        if (foundFolders === 0) {
+            noFoldersResults.classList.remove('hidden');
+        } else {
+            noFoldersResults.classList.add('hidden');
+        }
+    }
+
+    function searchFiles(searchTerm) {
+        const filesContainer = document.getElementById('searchFilesContainer');
+        const noFilesResults = document.getElementById('noFilesResults');
+        const originalFileItems = document.querySelectorAll('#filesContainer .file-item');
+        
+        let foundFiles = 0;
+        filesContainer.innerHTML = '';
+        
+        originalFileItems.forEach(file => {
+            const fileName = file.querySelector('.file-name').textContent.toLowerCase();
+            const fileType = file.querySelector('.file-type').textContent.toLowerCase();
+            
+            if (fileName.includes(searchTerm) || fileType.includes(searchTerm)) {
+                const clone = file.cloneNode(true);
+                const fileNameElement = clone.querySelector('.file-name');
+                const originalName = fileNameElement.textContent;
+                const highlightedName = highlightText(originalName, searchTerm);
+                fileNameElement.innerHTML = highlightedName;
+                
+                filesContainer.appendChild(clone);
+                foundFiles++;
+            }
+        });
+        
+        if (foundFiles === 0) {
+            noFilesResults.classList.remove('hidden');
+        } else {
+            noFilesResults.classList.add('hidden');
+        }
+    }
+
+    function highlightText(text, searchTerm) {
+        if (!searchTerm) return text;
+        const escapedTerm = searchTerm.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        const regex = new RegExp(`(${escapedTerm})`, 'gi');
+        return text.replace(regex, '<span class="bg-yellow-300 px-1 rounded-lg font-bold">$1</span>');
+    }
+
+    function updateSearchInfo(searchTerm) {
+        const searchResultsInfo = document.getElementById('searchResultsInfo');
+        const foundFolders = document.querySelectorAll('#searchFoldersContainer .folder-item').length;
+        const foundFiles = document.querySelectorAll('#searchFilesContainer .file-item').length;
+        
+        let infoText = `Search results for "<span class="font-semibold">${searchTerm}</span>" - `;
+        
+        if (foundFolders > 0 && foundFiles > 0) {
+            infoText += `<span class="text-blue-600 font-semibold">${foundFolders} folder${foundFolders !== 1 ? 's' : ''}</span> and <span class="text-green-600 font-semibold">${foundFiles} file${foundFiles !== 1 ? 's' : ''}</span> found`;
+        } else if (foundFolders > 0) {
+            infoText += `<span class="text-blue-600 font-semibold">${foundFolders} folder${foundFolders !== 1 ? 's' : ''}</span> found`;
+        } else if (foundFiles > 0) {
+            infoText += `<span class="text-green-600 font-semibold">${foundFiles} file${foundFiles !== 1 ? 's' : ''}</span> found`;
+        } else {
+            infoText += 'No results found';
+        }
+        
+        searchResultsInfo.innerHTML = infoText;
+        searchResultsInfo.classList.remove('hidden');
+    }
+
+    function showNormalView() {
+        const normalView = document.getElementById('normalView');
+        const searchResultsView = document.getElementById('searchResultsView');
+        
+        searchResultsView.style.opacity = '0';
+        setTimeout(() => {
+            searchResultsView.classList.add('hidden');
+            normalView.classList.remove('hidden');
+            normalView.style.opacity = '0';
+            setTimeout(() => normalView.style.opacity = '1', 50);
+        }, 300);
+        
+        document.getElementById('searchResultsInfo').classList.add('hidden');
+        currentSearchTerm = '';
+    }
+
+    // Enhanced modal functions with animations
+    function showCreateFolderModal() {
+        const modal = document.getElementById('createFolderModal');
+        modal.classList.remove('hidden');
+        setTimeout(() => modal.style.opacity = '1', 10);
+    }
+
+    function hideCreateFolderModal() {
+        const modal = document.getElementById('createFolderModal');
+        modal.style.opacity = '0';
+        setTimeout(() => {
+            modal.classList.add('hidden');
+            document.getElementById('createFolderForm').reset();
+        }, 300);
+    }
+
+    function showMoveFileModal(fileId, fileName) {
+        document.getElementById('moveFileName').textContent = fileName;
+        document.getElementById('moveFileId').value = fileId;
+        const modal = document.getElementById('moveFileModal');
+        modal.classList.remove('hidden');
+        setTimeout(() => modal.style.opacity = '1', 10);
+    }
+
+    function hideMoveFileModal() {
+        const modal = document.getElementById('moveFileModal');
+        modal.style.opacity = '0';
+        setTimeout(() => {
+            modal.classList.add('hidden');
+            document.getElementById('moveFileForm').reset();
+        }, 300);
+    }
+
+    function showShareModal(fileId, fileName) {
+        document.getElementById('shareFileName').textContent = fileName;
+        document.getElementById('shareFileId').value = fileId;
+        const modal = document.getElementById('shareModal');
+        modal.classList.remove('hidden');
+        document.getElementById('shareResult').classList.add('hidden');
+        document.getElementById('shareForm').reset();
+        setTimeout(() => modal.style.opacity = '1', 10);
+    }
+
+    function hideShareModal() {
+        const modal = document.getElementById('shareModal');
+        modal.style.opacity = '0';
+        setTimeout(() => modal.classList.add('hidden'), 300);
+    }
+
+    // Enhanced form submissions with loading states
+    document.getElementById('createFolderForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        const formData = new FormData(this);
+        const submitBtn = this.querySelector('button[type="submit"]');
+        const originalText = submitBtn.innerHTML;
+        
+        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Creating...';
+        submitBtn.disabled = true;
+        
+        fetch('/folder/create/', {
+            method: 'POST',
+            headers: { 'X-CSRFToken': '{{ csrf_token }}' },
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                submitBtn.innerHTML = '<i class="fas fa-check mr-2"></i>Created!';
+                setTimeout(() => location.reload(), 1000);
+            } else {
+                throw new Error(data.error || 'Unknown error');
+            }
+        })
+        .catch(error => {
+            submitBtn.innerHTML = originalText;
+            submitBtn.disabled = false;
+            alert('Error creating folder: ' + error.message);
+        });
+    });
+
+    document.getElementById('moveFileForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        const formData = new FormData(this);
+        const submitBtn = this.querySelector('button[type="submit"]');
+        const originalText = submitBtn.innerHTML;
+        
+        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Moving...';
+        submitBtn.disabled = true;
+        
+        fetch(`/file/move/${document.getElementById('moveFileId').value}/`, {
+            method: 'POST',
+            headers: { 'X-CSRFToken': '{{ csrf_token }}' },
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                submitBtn.innerHTML = '<i class="fas fa-check mr-2"></i>Moved!';
+                setTimeout(() => location.reload(), 1000);
+            } else {
+                throw new Error(data.error || 'Unknown error');
+            }
+        })
+        .catch(error => {
+            submitBtn.innerHTML = originalText;
+            submitBtn.disabled = false;
+            alert('Error moving file: ' + error.message);
+        });
+    });
+
+    // Enhanced file operations
+    function deleteFile(fileId) {
+        if (confirm('Are you sure you want to delete this file? This action cannot be undone.')) {
+            fetch(`/delete/${fileId}/`, {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': '{{ csrf_token }}',
+                    'Content-Type': 'application/json',
+                },
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Add deletion animation
+                    const fileElement = document.querySelector(`[onclick="deleteFile('${fileId}')"]`).closest('.file-item');
+                    if (fileElement) {
+                        fileElement.style.opacity = '0';
+                        fileElement.style.transform = 'translateX(100px)';
+                        setTimeout(() => location.reload(), 500);
+                    } else {
+                        location.reload();
+                    }
+                } else {
+                    alert('Error deleting file');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Error deleting file');
+            });
+        }
+    }
+
+    // Enhanced share functionality
+    function copyShareLink() {
+        const linkInput = document.getElementById('shareLinkOutput');
+        linkInput.select();
+        linkInput.setSelectionRange(0, 99999);
+        
+        navigator.clipboard.writeText(linkInput.value).then(function() {
+            const copyBtn = event.target.closest('button');
+            const originalHtml = copyBtn.innerHTML;
+            copyBtn.innerHTML = '<i class="fas fa-check"></i>';
+            copyBtn.classList.remove('bg-green-500', 'hover:bg-green-600');
+            copyBtn.classList.add('bg-green-600');
+            
+            setTimeout(() => {
+                copyBtn.innerHTML = originalHtml;
+                copyBtn.classList.remove('bg-green-600');
+                copyBtn.classList.add('bg-green-500', 'hover:bg-green-600');
+            }, 2000);
+        }).catch(function() {
+            document.execCommand('copy');
+            alert('Link copied to clipboard!');
+        });
+    }
+
+    document.getElementById('shareForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        const formData = new FormData(this);
+        const fileId = document.getElementById('shareFileId').value;
+        const submitBtn = this.querySelector('button[type="submit"]');
+        const originalText = submitBtn.innerHTML;
+        
+        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Creating...';
+        submitBtn.disabled = true;
+        
+        fetch(`/share/create/${fileId}/`, {
+            method: 'POST',
+            headers: { 'X-CSRFToken': '{{ csrf_token }}' },
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                document.getElementById('shareLinkOutput').value = data.share_url;
+                document.getElementById('shareResult').classList.remove('hidden');
+                submitBtn.innerHTML = '<i class="fas fa-check mr-2"></i>Created!';
+            } else {
+                throw new Error(data.error || 'Unknown error');
+            }
+        })
+        .catch(error => {
+            submitBtn.innerHTML = originalText;
+            submitBtn.disabled = false;
+            alert('Error creating share link: ' + error.message);
+        });
+    });
+
+    // Enhanced public/private toggle
+    function toggleFileVisibility(fileId) {
+        const button = event.target.closest('button');
+        const originalHtml = button.innerHTML;
+        
+        button.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+        button.disabled = true;
+        
+        fetch(`/file/toggle-public/${fileId}/`, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': '{{ csrf_token }}',
+                'Content-Type': 'application/json',
+            },
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                button.innerHTML = '<i class="fas fa-check"></i>';
+                setTimeout(() => location.reload(), 1000);
+            } else {
+                throw new Error(data.error);
+            }
+        })
+        .catch(error => {
+            button.innerHTML = originalHtml;
+            button.disabled = false;
+            alert('Error: ' + error.message);
+        });
+    }
+
+    // Enhanced copy public link
+    function copyPublicLink(fileId) {
+        const publicUrl = `${window.location.origin}/public/file/${fileId}/`;
+        const button = event.target.closest('button');
+        const originalHtml = button.innerHTML;
+        
+        button.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+        
+        navigator.clipboard.writeText(publicUrl).then(function() {
+            button.innerHTML = '<i class="fas fa-check"></i>';
+            setTimeout(() => {
+                button.innerHTML = originalHtml;
+            }, 2000);
+        }).catch(function() {
+            const tempInput = document.createElement('input');
+            tempInput.value = publicUrl;
+            document.body.appendChild(tempInput);
+            tempInput.select();
+            document.execCommand('copy');
+            document.body.removeChild(tempInput);
+            button.innerHTML = '<i class="fas fa-check"></i>';
+            setTimeout(() => {
+                button.innerHTML = originalHtml;
+            }, 2000);
+        });
+    }
+
+    // Enhanced modal close functionality
+    document.addEventListener('click', function(event) {
+        const modals = ['createFolderModal', 'moveFileModal', 'shareModal'];
+        modals.forEach(modalId => {
+            const modal = document.getElementById(modalId);
+            if (event.target === modal) {
+                if (modalId === 'createFolderModal') hideCreateFolderModal();
+                if (modalId === 'moveFileModal') hideMoveFileModal();
+                if (modalId === 'shareModal') hideShareModal();
+            }
+        });
+    });
+
+    document.addEventListener('keydown', function(event) {
+        if (event.key === 'Escape') {
+            hideCreateFolderModal();
+            hideMoveFileModal();
+            hideShareModal();
+        }
+    });
+
+    // Initialize enhanced interactions
+    document.addEventListener('DOMContentLoaded', function() {
+        console.log('Enhanced file list loaded with modern UI effects');
+        
+        // Add hover effects to all interactive elements
+        const interactiveElements = document.querySelectorAll('button, a, .file-card, .folder-item');
+        interactiveElements.forEach(el => {
+            el.style.transition = 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)';
+        });
+    });
+</script>
+{% endblock %}

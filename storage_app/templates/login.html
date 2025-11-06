@@ -1,0 +1,156 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-400 via-purple-500 to-pink-500 py-12 px-4 sm:px-6 lg:px-8">
+    <div class="max-w-md w-full space-y-8">
+        <!-- Animated Card -->
+        <div class="glass-card rounded-3xl shadow-2xl border border-white/20 transform transition-all duration-500 hover:scale-105">
+            <div class="p-8">
+                <!-- Header -->
+                <div class="text-center mb-8">
+                    <div class="mx-auto w-20 h-20 bg-gradient-to-br from-white to-blue-100 rounded-full flex items-center justify-center shadow-lg floating mb-4">
+                        <i class="fas fa-cloud text-3xl bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent"></i>
+                    </div>
+                    <h2 class="text-3xl font-bold bg-gradient-to-r from-white to-blue-100 bg-clip-text text-transparent">
+                        Welcome Back
+                    </h2>
+                    <p class="text-blue-100 mt-2">Sign in to your cloud storage</p>
+                </div>
+
+                <!-- Login Form -->
+                <form class="space-y-6" method="POST">
+                    {% csrf_token %}
+                    
+                    {% if error %}
+                    <div class="bg-red-400/20 backdrop-blur-sm border border-red-300/30 text-red-100 px-4 py-3 rounded-2xl transform transition-all duration-300 animate-pulse">
+                        <div class="flex items-center space-x-2">
+                            <i class="fas fa-exclamation-circle"></i>
+                            <span>{{ error }}</span>
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    <!-- Username Field -->
+                    <div class="space-y-2">
+                        <label class="text-sm font-medium text-blue-100">Username</label>
+                        <div class="relative">
+                            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                <i class="fas fa-user text-blue-300"></i>
+                            </div>
+                            <input id="username" name="username" type="text" required 
+                                   class="block w-full pl-10 pr-4 py-4 bg-white/10 backdrop-blur-sm border border-white/20 rounded-2xl placeholder-blue-200 text-white focus:outline-none focus:ring-4 focus:ring-white/30 focus:bg-white/20 transition-all duration-300"
+                                   placeholder="Enter your username">
+                        </div>
+                    </div>
+
+                    <!-- Password Field -->
+                    <div class="space-y-2">
+                        <label class="text-sm font-medium text-blue-100">Password</label>
+                        <div class="relative">
+                            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                <i class="fas fa-lock text-blue-300"></i>
+                            </div>
+                            <input id="password" name="password" type="password" required 
+                                   class="block w-full pl-10 pr-4 py-4 bg-white/10 backdrop-blur-sm border border-white/20 rounded-2xl placeholder-blue-200 text-white focus:outline-none focus:ring-4 focus:ring-white/30 focus:bg-white/20 transition-all duration-300"
+                                   placeholder="Enter your password">
+                        </div>
+                    </div>
+
+                    <!-- Submit Button -->
+                    <button type="submit" 
+                            class="group relative w-full flex justify-center py-4 px-4 border border-transparent text-lg font-bold rounded-2xl text-white bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 focus:outline-none focus:ring-4 focus:ring-white/30 transform transition-all duration-300 hover:scale-105 hover:shadow-2xl">
+                        <span class="absolute left-0 inset-y-0 flex items-center pl-3">
+                            <i class="fas fa-sign-in-alt group-hover:animate-bounce"></i>
+                        </span>
+                        Sign In
+                    </button>
+                </form>
+
+                <!-- Registration Link -->
+                <div class="text-center mt-6">
+                    <p class="text-blue-100">
+                        Don't have an account?
+                        <a href="{% url 'register' %}" 
+                           class="font-semibold text-white hover:text-blue-200 underline transition-colors duration-200 transform hover:scale-105 inline-block">
+                            Sign up now
+                        </a>
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Features Preview -->
+        <div class="text-center">
+            <p class="text-blue-100 text-sm flex items-center justify-center space-x-4">
+                <span class="flex items-center space-x-1">
+                    <i class="fas fa-cloud-upload-alt"></i>
+                    <span>Secure Cloud Storage</span>
+                </span>
+                <span class="flex items-center space-x-1">
+                    <i class="fas fa-shield-alt"></i>
+                    <span>End-to-End Encryption</span>
+                </span>
+                <span class="flex items-center space-x-1">
+                    <i class="fas fa-mobile-alt"></i>
+                    <span>Access Anywhere</span>
+                </span>
+            </p>
+        </div>
+    </div>
+</div>
+
+<style>
+    .floating {
+        animation: floating 3s ease-in-out infinite;
+    }
+
+    @keyframes floating {
+        0% { transform: translateY(0px) rotate(0deg); }
+        50% { transform: translateY(-10px) rotate(2deg); }
+        100% { transform: translateY(0px) rotate(0deg); }
+    }
+
+    .glass-card {
+        background: rgba(255, 255, 255, 0.1);
+        backdrop-filter: blur(20px);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37);
+    }
+
+    input::placeholder {
+        color: rgba(255, 255, 255, 0.6) !important;
+    }
+
+    input:focus {
+        background: rgba(255, 255, 255, 0.15) !important;
+    }
+</style>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Add input focus effects
+        const inputs = document.querySelectorAll('input');
+        inputs.forEach(input => {
+            input.addEventListener('focus', function() {
+                this.parentElement.classList.add('scale-105');
+            });
+            
+            input.addEventListener('blur', function() {
+                this.parentElement.classList.remove('scale-105');
+            });
+        });
+
+        // Add button hover effects
+        const submitBtn = document.querySelector('button[type="submit"]');
+        if (submitBtn) {
+            submitBtn.addEventListener('mouseenter', function() {
+                this.style.transform = 'translateY(-2px) scale(1.02)';
+            });
+            
+            submitBtn.addEventListener('mouseleave', function() {
+                this.style.transform = 'translateY(0px) scale(1)';
+            });
+        }
+    });
+</script>
+{% endblock %}

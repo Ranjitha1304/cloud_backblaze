@@ -1,0 +1,299 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <!-- Storage Overview -->
+    <div class="glass-card rounded-2xl mb-8 transform transition-all duration-300 hover:scale-[1.02]">
+        <div class="px-6 py-8">
+            <div class="flex items-center justify-between mb-6">
+                <h3 class="text-2xl font-bold text-gray-800">Storage Overview</h3>
+                <div class="w-12 h-12 bg-blue-500 rounded-full flex items-center justify-center floating">
+                    <i class="fas fa-database text-white text-lg"></i>
+                </div>
+            </div>
+            <div class="space-y-4">
+                <div class="flex justify-between text-sm font-medium text-gray-600">
+                    <span>Used: {{ user_profile.used_storage|filesizeformat }}</span>
+                    <span>Total: {{ user_profile.storage_plan.max_storage_size|filesizeformat }}</span>
+                </div>
+                <div class="w-full bg-gray-200 rounded-full h-4 overflow-hidden">
+                    <div class="storage-bar h-4 rounded-full relative" 
+                         style="width: {{ storage_usage_percent }}%">
+                        <div class="absolute inset-0 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full"></div>
+                    </div>
+                </div>
+                <p class="text-sm text-gray-600 font-medium">
+                    {{ storage_usage_percent|floatformat:1 }}% of storage used
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quick Stats -->
+    <div class="grid grid-cols-1 gap-6 sm:grid-cols-3 mb-8">
+        <div class="glass-card rounded-2xl p-6 transform transition-all duration-300 hover:scale-105 group">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-sm font-medium text-gray-600 group-hover:text-gray-800 transition-colors">Total Files</p>
+                    <p class="mt-2 text-3xl font-bold text-gray-900">{{ total_files }}</p>
+                </div>
+                <div class="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center group-hover:bg-blue-200 transition-colors">
+                    <i class="fas fa-file text-blue-600 text-xl"></i>
+                </div>
+            </div>
+        </div>
+        
+        <div class="glass-card rounded-2xl p-6 transform transition-all duration-300 hover:scale-105 group">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-sm font-medium text-gray-600 group-hover:text-gray-800 transition-colors">Storage Used</p>
+                    <p class="mt-2 text-3xl font-bold text-gray-900">{{ total_size|filesizeformat }}</p>
+                </div>
+                <div class="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center group-hover:bg-green-200 transition-colors">
+                    <i class="fas fa-hdd text-green-600 text-xl"></i>
+                </div>
+            </div>
+        </div>
+        
+        <div class="glass-card rounded-2xl p-6 transform transition-all duration-300 hover:scale-105 group">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-sm font-medium text-gray-600 group-hover:text-gray-800 transition-colors">Plan</p>
+                    <p class="mt-2 text-3xl font-bold text-gray-900">{{ user_profile.storage_plan.name }}</p>
+                </div>
+                <div class="w-12 h-12 bg-purple-100 rounded-xl flex items-center justify-center group-hover:bg-purple-200 transition-colors">
+                    <i class="fas fa-crown text-purple-600 text-xl"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- File Upload -->
+    <div class="glass-card rounded-2xl mb-8 transform transition-all duration-300 hover:scale-[1.01]">
+        <div class="px-6 py-8">
+            <div class="flex items-center justify-between mb-6">
+                <h3 class="text-2xl font-bold text-gray-800">Upload File</h3>
+                <div class="w-12 h-12 bg-green-500 rounded-full flex items-center justify-center pulse-upload">
+                    <i class="fas fa-cloud-upload-alt text-white text-lg"></i>
+                </div>
+            </div>
+            
+            <form id="uploadForm" enctype="multipart/form-data" class="space-y-6">
+                {% csrf_token %}
+                <div class="flex items-center justify-center w-full">
+                    <label for="file" class="upload-area flex flex-col items-center justify-center w-full h-40 border-2 border-dashed rounded-2xl cursor-pointer bg-gray-50/50 hover:bg-blue-50/50 transition-all duration-300 border-blue-300 hover:border-blue-400">
+                        <div class="flex flex-col items-center justify-center pt-5 pb-6">
+                            <i class="fas fa-cloud-upload-alt text-4xl text-blue-400 mb-3"></i>
+                            <p class="mb-2 text-lg font-medium text-gray-700">Drop your files here</p>
+                            <p class="text-sm text-gray-500">or click to browse</p>
+                            <p class="text-xs text-gray-400 mt-2">Max 100MB per file</p>
+                        </div>
+                        <input id="file" name="file" type="file" class="hidden" />
+                    </label>
+                </div>
+                
+                <div class="flex items-center space-x-3 bg-blue-50/50 rounded-xl p-4">
+                    <input id="is_public" name="is_public" type="checkbox" 
+                           class="h-5 w-5 text-blue-600 focus:ring-blue-500 border-gray-300 rounded transition-all duration-200">
+                    <label for="is_public" class="block text-sm font-medium text-gray-700 cursor-pointer">
+                        Make file public (anyone with the link can access)
+                    </label>
+                </div>
+                
+                <button type="submit" 
+                        class="btn-gradient w-full text-white py-4 px-6 rounded-xl font-semibold text-lg shadow-lg hover:shadow-xl transition-all duration-300">
+                    <i class="fas fa-upload mr-2"></i>Upload File
+                </button>
+            </form>
+            
+            <div id="uploadStatus" class="mt-4 hidden rounded-xl p-4"></div>
+        </div>
+    </div>
+
+    <!-- View All Files Button -->
+    <div class="text-center mb-8">
+        <a href="{% url 'file_list' %}" 
+           class="inline-flex items-center px-8 py-4 btn-gradient text-white rounded-xl font-semibold text-lg shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105">
+            <i class="fas fa-list mr-3"></i>View All Files
+        </a>
+    </div>
+
+    <!-- Recent Files -->
+    <div class="glass-card rounded-2xl">
+        <div class="px-6 py-8">
+            <div class="flex items-center justify-between mb-6">
+                <h3 class="text-2xl font-bold text-gray-800">Recent Files</h3>
+                <div class="w-12 h-12 bg-orange-500 rounded-full flex items-center justify-center">
+                    <i class="fas fa-history text-white text-lg"></i>
+                </div>
+            </div>
+            
+            <div class="space-y-4">
+                {% for file in files %}
+                <div class="file-card bg-white/80 rounded-xl p-5 border border-gray-200/50 hover:border-blue-300/50 transition-all duration-300">
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center space-x-4">
+                            <div class="w-12 h-12 rounded-xl bg-gradient-to-br 
+                                {% if file.file_type == '.pdf' %}from-red-400 to-red-600
+                                {% elif file.file_type in '.doc,.docx' %}from-blue-400 to-blue-600
+                                {% elif file.file_type in '.xls,.xlsx' %}from-green-400 to-green-600
+                                {% elif file.file_type in '.jpg,.jpeg,.png,.gif' %}from-purple-400 to-purple-600
+                                {% else %}from-gray-400 to-gray-600{% endif %} 
+                                flex items-center justify-center shadow-lg">
+                                <i class="fas 
+                                    {% if file.file_type == '.pdf' %}fa-file-pdf
+                                    {% elif file.file_type in '.doc,.docx' %}fa-file-word
+                                    {% elif file.file_type in '.xls,.xlsx' %}fa-file-excel
+                                    {% elif file.file_type in '.jpg,.jpeg,.png,.gif' %}fa-file-image
+                                    {% else %}fa-file{% endif %} 
+                                    text-white text-lg">
+                                </i>
+                            </div>
+                            <div>
+                                <p class="font-semibold text-gray-900 text-lg">{{ file.name }}</p>
+                                <p class="text-sm text-gray-600">{{ file.size|filesizeformat }} • {{ file.uploaded_at|date:"M d, Y" }}</p>
+                            </div>
+                        </div>
+                        <div class="flex space-x-3">
+                            <button onclick="shareFile('{{ file.id }}')" 
+                                    class="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center text-blue-600 hover:bg-blue-200 transition-colors duration-200 group">
+                                <i class="fas fa-share-alt group-hover:scale-110 transition-transform"></i>
+                            </button>
+                            <button onclick="deleteFile('{{ file.id }}')" 
+                                    class="w-10 h-10 bg-red-100 rounded-lg flex items-center justify-center text-red-600 hover:bg-red-200 transition-colors duration-200 group">
+                                <i class="fas fa-trash group-hover:scale-110 transition-transform"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                {% empty %}
+                <div class="text-center py-12">
+                    <i class="fas fa-folder-open text-6xl text-gray-300 mb-4"></i>
+                    <p class="text-gray-500 text-lg">No files uploaded yet.</p>
+                    <p class="text-gray-400 mt-2">Upload your first file to get started!</p>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    $('#uploadForm').on('submit', function(e) {
+        e.preventDefault();
+        var formData = new FormData(this);
+        var submitBtn = $(this).find('button[type="submit"]');
+        var originalText = submitBtn.html();
+        
+        // Show loading state
+        submitBtn.html('<i class="fas fa-spinner fa-spin mr-2"></i>Uploading...');
+        submitBtn.prop('disabled', true);
+        
+        $.ajax({
+            url: '{% url "upload_file" %}',
+            type: 'POST',
+            data: formData,
+            processData: false,
+            contentType: false,
+            success: function(response) {
+                if (response.success) {
+                    $('#uploadStatus').removeClass('hidden bg-red-100 border-red-400 text-red-700')
+                        .addClass('bg-green-100 border-green-400 text-green-700')
+                        .html('<div class="flex items-center space-x-2"><i class="fas fa-check-circle text-green-500"></i><span>File uploaded successfully! Refreshing...</span></div>')
+                        .removeClass('hidden');
+                    setTimeout(() => location.reload(), 1500);
+                } else {
+                    $('#uploadStatus').removeClass('hidden bg-green-100 border-green-400 text-green-700')
+                        .addClass('bg-red-100 border-red-400 text-red-700')
+                        .html('<div class="flex items-center space-x-2"><i class="fas fa-times-circle text-red-500"></i><span>' + response.error + '</span></div>')
+                        .removeClass('hidden');
+                }
+            },
+            error: function() {
+                $('#uploadStatus').removeClass('hidden bg-green-100 border-green-400 text-green-700')
+                    .addClass('bg-red-100 border-red-400 text-red-700')
+                    .html('<div class="flex items-center space-x-2"><i class="fas fa-times-circle text-red-500"></i><span>Upload failed. Please try again.</span></div>')
+                    .removeClass('hidden');
+            },
+            complete: function() {
+                submitBtn.html(originalText);
+                submitBtn.prop('disabled', false);
+            }
+        });
+    });
+
+    function deleteFile(fileId) {
+        if (confirm('Are you sure you want to delete this file? This action cannot be undone.')) {
+            $.post(`/delete/${fileId}/`, {
+                'csrfmiddlewaretoken': '{{ csrf_token }}'
+            }, function(response) {
+                if (response.success) {
+                    location.reload();
+                }
+            });
+        }
+    }
+
+    function shareFile(fileId) {
+        // Implement share functionality
+        alert('Share functionality for file: ' + fileId);
+    }
+
+    // Enhanced drag and drop
+    document.addEventListener('DOMContentLoaded', function() {
+        const uploadArea = document.querySelector('.upload-area');
+        const fileInput = document.getElementById('file');
+        
+        if (uploadArea && fileInput) {
+            ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+                uploadArea.addEventListener(eventName, preventDefaults, false);
+            });
+            
+            function preventDefaults(e) {
+                e.preventDefault();
+                e.stopPropagation();
+            }
+            
+            ['dragenter', 'dragover'].forEach(eventName => {
+                uploadArea.addEventListener(eventName, highlight, false);
+            });
+            
+            ['dragleave', 'drop'].forEach(eventName => {
+                uploadArea.addEventListener(eventName, unhighlight, false);
+            });
+            
+            function highlight() {
+                uploadArea.classList.add('border-blue-400', 'bg-blue-50', 'scale-105');
+                uploadArea.classList.remove('border-blue-300', 'bg-gray-50/50');
+            }
+            
+            function unhighlight() {
+                uploadArea.classList.remove('border-blue-400', 'bg-blue-50', 'scale-105');
+                uploadArea.classList.add('border-blue-300', 'bg-gray-50/50');
+            }
+            
+            uploadArea.addEventListener('drop', handleDrop, false);
+            
+            function handleDrop(e) {
+                const dt = e.dataTransfer;
+                const files = dt.files;
+                fileInput.files = files;
+                
+                // Show file name
+                if (files.length > 0) {
+                    const fileName = files[0].name;
+                    uploadArea.innerHTML = `
+                        <div class="flex flex-col items-center justify-center">
+                            <i class="fas fa-file text-3xl text-green-500 mb-2"></i>
+                            <p class="text-lg font-medium text-gray-700">${fileName}</p>
+                            <p class="text-sm text-gray-500">Ready to upload</p>
+                        </div>
+                    `;
+                }
+            }
+        }
+    });
+</script>
+{% endblock %}
