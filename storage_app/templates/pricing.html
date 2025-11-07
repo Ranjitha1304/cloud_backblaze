@@ -1,0 +1,269 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <!-- Header -->
+    <div class="text-center mb-12">
+        <h1 class="text-4xl font-bold text-gray-900 mb-4">Choose Your Plan</h1>
+        <p class="text-xl text-gray-600 max-w-2xl mx-auto">
+            Select the perfect plan for your storage needs. All plans include secure cloud storage, 
+            file sharing, and 24/7 access.
+        </p>
+    </div>
+
+    <!-- Billing Toggle -->
+    <div class="flex justify-center mb-12">
+        <div class="bg-gray-100 rounded-2xl p-1 inline-flex">
+            <button id="monthlyBtn" class="px-6 py-3 rounded-xl font-semibold transition-all duration-300 bg-white text-gray-900 shadow-sm">
+                Monthly Billing
+            </button>
+            <button id="yearlyBtn" class="px-6 py-3 rounded-xl font-semibold transition-all duration-300 text-gray-600 hover:text-gray-900">
+                Yearly Billing (Save 20%)
+            </button>
+        </div>
+    </div>
+
+    <!-- Pricing Plans Grid -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 mb-12">
+        {% for plan in plans %}
+        <div class="glass-card rounded-3xl p-8 transform transition-all duration-500 hover:scale-105 
+            {% if plan.plan_type == 'pro' %}border-2 border-purple-500 relative{% else %}border border-white/20{% endif %}">
+            
+            {% if plan.plan_type == 'pro' %}
+            <div class="absolute -top-4 right-1 transform -translate-x-1/2">
+                <span class="bg-gradient-to-r from-purple-500 to-pink-500 text-white px-4 py-2 rounded-full text-sm font-bold shadow-lg">
+                    MOST POPULAR
+                </span>
+            </div>
+            {% endif %}
+            
+            <!-- Plan Header -->
+            <div class="text-center mb-6">
+                <h3 class="text-2xl font-bold text-gray-900 mb-2">{{ plan.name }}</h3>
+                <div class="flex items-baseline justify-center mb-4">
+                    <span class="text-4xl font-bold text-gray-900">${{ plan.price }}</span>
+                    <span class="text-gray-600 ml-2">/month</span>
+                </div>
+                <p class="text-lg font-semibold text-gray-700 mb-2">
+                    {{ plan.max_storage_size|filesizeformat }} Storage
+                </p>
+            </div>
+
+            <!-- Features List -->
+            <ul class="space-y-3 mb-8">
+                {% for feature in plan.features %}
+                <li class="flex items-center text-gray-700">
+                    <i class="fas fa-check-circle text-green-500 mr-3"></i>
+                    <span>{{ feature }}</span>
+                </li>
+                {% endfor %}
+            </ul>
+
+            <!-- Action Button -->
+            <div class="text-center">
+                {% if plan == current_plan %}
+                <button class="w-full bg-gray-500 text-white py-4 px-6 rounded-2xl font-semibold text-lg cursor-not-allowed">
+                    Current Plan
+                </button>
+                {% else %}
+                <button onclick="selectPlan('{{ plan.id }}')" 
+                        class="w-full {% if plan.plan_type == 'pro' %}btn-gradient{% else %}bg-gray-600 hover:bg-gray-700{% endif %} 
+                               text-white py-4 px-6 rounded-2xl font-semibold text-lg shadow-lg hover:shadow-xl 
+                               transition-all duration-300 transform hover:scale-105">
+                    {% if plan.plan_type == 'free' %}
+                        Get Started
+                    {% else %}
+                        Upgrade Now
+                    {% endif %}
+                </button>
+                {% endif %}
+                
+                {% if plan.plan_type != 'free' %}
+                <p class="text-xs text-gray-500 mt-3">No setup fees. Cancel anytime.</p>
+                {% endif %}
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    <!-- Feature Comparison -->
+    <div class="glass-card rounded-3xl p-8">
+        <h2 class="text-3xl font-bold text-gray-900 text-center mb-8">Compare Plans</h2>
+        
+        <div class="overflow-x-auto">
+            <table class="w-full">
+                <thead>
+                    <tr class="border-b border-gray-200">
+                        <th class="text-left py-4 font-semibold text-gray-900">Feature</th>
+                        {% for plan in plans %}
+                        <th class="text-center py-4 font-semibold text-gray-900">{{ plan.name }}</th>
+                        {% endfor %}
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr class="border-b border-gray-100">
+                        <td class="py-4 font-medium text-gray-700">Storage Space</td>
+                        {% for plan in plans %}
+                        <td class="text-center py-4 text-gray-600">{{ plan.max_storage_size|filesizeformat }}</td>
+                        {% endfor %}
+                    </tr>
+                    <tr class="border-b border-gray-100">
+                        <td class="py-4 font-medium text-gray-700">File Size Limit</td>
+                        {% for plan in plans %}
+                        <td class="text-center py-4 text-gray-600">
+                            {% if plan.plan_type == 'free' %}100MB
+                            {% else %}2GB{% endif %}
+                        </td>
+                        {% endfor %}
+                    </tr>
+                    <tr class="border-b border-gray-100">
+                        <td class="py-4 font-medium text-gray-700">File Sharing</td>
+                        {% for plan in plans %}
+                        <td class="text-center py-4 text-gray-600">
+                            <i class="fas fa-check text-green-500"></i>
+                        </td>
+                        {% endfor %}
+                    </tr>
+                    <tr class="border-b border-gray-100">
+                        <td class="py-4 font-medium text-gray-700">Priority Support</td>
+                        {% for plan in plans %}
+                        <td class="text-center py-4 text-gray-600">
+                            {% if plan.plan_type == 'free' %}-{% else %}
+                            <i class="fas fa-check text-green-500"></i>{% endif %}
+                        </td>
+                        {% endfor %}
+                    </tr>
+                    <tr class="border-b border-gray-100">
+                        <td class="py-4 font-medium text-gray-700">Advanced Analytics</td>
+                        {% for plan in plans %}
+                        <td class="text-center py-4 text-gray-600">
+                            {% if plan.plan_type in 'pro,enterprise' %}
+                            <i class="fas fa-check text-green-500"></i>
+                            {% else %}-{% endif %}
+                        </td>
+                        {% endfor %}
+                    </tr>
+                    <tr>
+                        <td class="py-4 font-medium text-gray-700">Team Collaboration</td>
+                        {% for plan in plans %}
+                        <td class="text-center py-4 text-gray-600">
+                            {% if plan.plan_type == 'enterprise' %}
+                            <i class="fas fa-check text-green-500"></i>
+                            {% else %}-{% endif %}
+                        </td>
+                        {% endfor %}
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- FAQ Section -->
+    <div class="mt-12">
+        <h2 class="text-3xl font-bold text-gray-900 text-center mb-8">Frequently Asked Questions</h2>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl mx-auto">
+            <div class="space-y-4">
+                <div class="bg-white/50 rounded-2xl p-6">
+                    <h3 class="font-semibold text-gray-900 mb-2">Can I change plans later?</h3>
+                    <p class="text-gray-600">Yes, you can upgrade or downgrade your plan at any time.</p>
+                </div>
+                <div class="bg-white/50 rounded-2xl p-6">
+                    <h3 class="font-semibold text-gray-900 mb-2">Is there a free trial?</h3>
+                    <p class="text-gray-600">All paid plans come with a 14-day free trial. No credit card required.</p>
+                </div>
+            </div>
+            <div class="space-y-4">
+                <div class="bg-white/50 rounded-2xl p-6">
+                    <h3 class="font-semibold text-gray-900 mb-2">What payment methods do you accept?</h3>
+                    <p class="text-gray-600">We accept all major credit cards and PayPal.</p>
+                </div>
+                <div class="bg-white/50 rounded-2xl p-6">
+                    <h3 class="font-semibold text-gray-900 mb-2">Can I cancel anytime?</h3>
+                    <p class="text-gray-600">Yes, you can cancel your subscription at any time with no cancellation fees.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Loading Modal -->
+<div id="loadingModal" class="fixed inset-0 bg-black/50 backdrop-blur-sm hidden z-50">
+    <div class="flex items-center justify-center min-h-screen">
+        <div class="glass-card rounded-3xl p-8 text-center">
+            <div class="w-16 h-16 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+            <h3 class="text-xl font-semibold text-gray-900 mb-2">Processing Payment</h3>
+            <p class="text-gray-600">Redirecting to secure payment gateway...</p>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    function selectPlan(planId) {
+        console.log('Selecting plan:', planId); // Debug log
+        
+        // Show loading modal
+        document.getElementById('loadingModal').classList.remove('hidden');
+        
+        // Create checkout session
+        fetch(`/create-checkout-session/${planId}/`, {
+            method: 'GET',
+            headers: {
+                'X-CSRFToken': '{{ csrf_token }}',
+                'Content-Type': 'application/json',
+            }
+        })
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('Network response was not ok');
+            }
+            return response.json();
+        })
+        .then(data => {
+            console.log('Response data:', data); // Debug log
+            
+            if (data.checkout_url) {
+                // Redirect to Stripe checkout
+                window.location.href = data.checkout_url;
+            } else if (data.redirect_url) {
+                // For free plans, redirect directly
+                window.location.href = data.redirect_url;
+            } else if (data.success && data.message) {
+                // For free plan success
+                alert(data.message);
+                window.location.href = data.redirect_url || '{% url "payment_success" %}';
+            } else {
+                throw new Error(data.error || 'Failed to create checkout session');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Error: ' + error.message);
+            document.getElementById('loadingModal').classList.add('hidden');
+        });
+    }
+
+    // Billing toggle functionality
+    document.addEventListener('DOMContentLoaded', function() {
+        const monthlyBtn = document.getElementById('monthlyBtn');
+        const yearlyBtn = document.getElementById('yearlyBtn');
+        
+        if (monthlyBtn && yearlyBtn) {
+            monthlyBtn.addEventListener('click', function() {
+                this.classList.add('bg-white', 'text-gray-900', 'shadow-sm');
+                this.classList.remove('text-gray-600');
+                yearlyBtn.classList.remove('bg-white', 'text-gray-900', 'shadow-sm');
+                yearlyBtn.classList.add('text-gray-600');
+            });
+
+            yearlyBtn.addEventListener('click', function() {
+                this.classList.add('bg-white', 'text-gray-900', 'shadow-sm');
+                this.classList.remove('text-gray-600');
+                monthlyBtn.classList.remove('bg-white', 'text-gray-900', 'shadow-sm');
+                monthlyBtn.classList.add('text-gray-600');
+            });
+        }
+    });
+</script>
+{% endblock %}

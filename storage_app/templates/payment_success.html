@@ -1,0 +1,43 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="min-h-screen bg-gradient-to-br from-green-400 via-blue-500 to-purple-600 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
+    <div class="max-w-md w-full">
+        <div class="glass-card rounded-3xl p-8 text-center transform transition-all duration-500 hover:scale-105">
+            <!-- Success Icon -->
+            <div class="w-20 h-20 bg-green-500 rounded-full flex items-center justify-center mx-auto mb-6 shadow-lg">
+                <i class="fas fa-check text-white text-2xl"></i>
+            </div>
+            
+            <!-- Success Message -->
+            <h1 class="text-3xl font-bold text-gray-900 mb-4">Payment Successful!</h1>
+            
+            {% if plan %}
+            <div class="bg-green-50 rounded-2xl p-6 mb-6 border border-green-200">
+                <h3 class="font-semibold text-green-800 mb-2">Plan Activated</h3>
+                <p class="text-green-700 text-xl font-bold">{{ plan.name }}</p>
+                <p class="text-green-600 mt-1">{{ plan.max_storage_size|filesizeformat }} Storage</p>
+                <p class="text-green-500 text-sm mt-2">You can now upload up to {{ plan.max_storage_size|filesizeformat }} of files</p>
+            </div>
+            {% else %}
+            <div class="bg-blue-50 rounded-2xl p-6 mb-6 border border-blue-200">
+                <h3 class="font-semibold text-blue-800 mb-2">Thank You!</h3>
+                <p class="text-blue-700">Your payment was successful and your account has been upgraded.</p>
+            </div>
+            {% endif %}
+            
+            <!-- Action Buttons -->
+            <div class="space-y-4">
+                <a href="{% url 'dashboard' %}" 
+                   class="w-full bg-gradient-to-r from-blue-500 to-purple-600 text-white py-4 px-6 rounded-2xl font-semibold text-lg shadow-lg hover:shadow-xl transition-all duration-300 inline-block">
+                    Go to Dashboard
+                </a>
+                <a href="{% url 'file_list' %}" 
+                   class="w-full bg-gray-600 text-white py-4 px-6 rounded-2xl font-semibold text-lg hover:bg-gray-700 transition-all duration-300 inline-block">
+                    View Your Files
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

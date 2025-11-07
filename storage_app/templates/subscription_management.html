@@ -1,0 +1,228 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <!-- Header -->
+    <div class="text-center mb-12">
+        <h1 class="text-4xl font-bold text-gray-900 mb-4">Subscription Management</h1>
+        <p class="text-xl text-gray-600">Manage your subscription and billing details</p>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <!-- Current Subscription -->
+        <div class="lg:col-span-2 space-y-8">
+            <!-- Current Plan Card -->
+            <div class="glass-card rounded-3xl p-8">
+                <h2 class="text-2xl font-bold text-gray-900 mb-6">Current Plan</h2>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                        <h3 class="text-lg font-semibold text-gray-700 mb-2">Plan Details</h3>
+                        <div class="space-y-2">
+                            <p class="flex justify-between">
+                                <span class="text-gray-600">Plan:</span>
+                                <span class="font-semibold">{{ subscription.plan.name }}</span>
+                            </p>
+                            <p class="flex justify-between">
+                                <span class="text-gray-600">Storage:</span>
+                                <span class="font-semibold">{{ subscription.plan.max_storage_size|filesizeformat }}</span>
+                            </p>
+                            <p class="flex justify-between">
+                                <span class="text-gray-600">Price:</span>
+                                <span class="font-semibold">${{ subscription.plan.price }}/month</span>
+                            </p>
+                            <p class="flex justify-between">
+                                <span class="text-gray-600">Status:</span>
+                                <span class="font-semibold capitalize {% if subscription.status == 'active' %}text-green-600{% else %}text-red-600{% endif %}">
+                                    {{ subscription.status }}
+                                </span>
+                            </p>
+                        </div>
+                    </div>
+                    
+                    <div>
+                        <h3 class="text-lg font-semibold text-gray-700 mb-2">Billing Period</h3>
+                        <div class="space-y-2">
+                            <p class="flex justify-between">
+                                <span class="text-gray-600">Current Period:</span>
+                                <span class="font-semibold">{{ subscription.current_period_start|date:"M d, Y" }} - {{ subscription.current_period_end|date:"M d, Y" }}</span>
+                            </p>
+                            <p class="flex justify-between">
+                                <span class="text-gray-600">Auto-renew:</span>
+                                <span class="font-semibold {% if subscription.cancel_at_period_end %}text-red-600{% else %}text-green-600{% endif %}">
+                                    {% if subscription.cancel_at_period_end %}No{% else %}Yes{% endif %}
+                                </span>
+                            </p>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Cancel Subscription Button -->
+                {% if subscription.status == 'active' and not subscription.cancel_at_period_end %}
+                <div class="mt-6 pt-6 border-t border-gray-200">
+                    <button onclick="cancelSubscription()" 
+                            class="w-full bg-red-600 text-white py-3 px-6 rounded-2xl font-semibold hover:bg-red-700 transition-all duration-300">
+                        <i class="fas fa-times-circle mr-2"></i>
+                        Cancel Subscription
+                    </button>
+                    <p class="text-sm text-gray-600 mt-2 text-center">
+                        Your subscription will remain active until {{ subscription.current_period_end|date:"F j, Y" }}
+                    </p>
+                </div>
+                {% elif subscription.cancel_at_period_end %}
+                <div class="mt-6 pt-6 border-t border-gray-200">
+                    <div class="bg-yellow-50 rounded-2xl p-4 border border-yellow-200">
+                        <div class="flex items-center">
+                            <i class="fas fa-exclamation-triangle text-yellow-600 mr-3"></i>
+                            <div>
+                                <p class="font-semibold text-yellow-800">Subscription Cancelled</p>
+                                <p class="text-yellow-700 text-sm">
+                                    Your subscription will end on {{ subscription.current_period_end|date:"F j, Y" }}
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+
+            <!-- Next Invoice -->
+            {% if upcoming_invoice %}
+            <div class="glass-card rounded-3xl p-8">
+                <h2 class="text-2xl font-bold text-gray-900 mb-6">Next Invoice</h2>
+                <div class="space-y-4">
+                    <div class="flex justify-between items-center">
+                        <span class="text-gray-600">Next payment date:</span>
+                        <span class="font-semibold">{{ upcoming_invoice.next_payment_attempt|date:"F j, Y" }}</span>
+                    </div>
+                    <div class="flex justify-between items-center">
+                        <span class="text-gray-600">Amount due:</span>
+                        <span class="font-semibold">${{ upcoming_invoice.amount_due|div:100 }}</span>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Sidebar -->
+        <div class="space-y-6">
+            <!-- Storage Usage -->
+            <div class="glass-card rounded-3xl p-6">
+                <h3 class="text-lg font-semibold text-gray-900 mb-4">Storage Usage</h3>
+                <div class="space-y-3">
+                    <div class="flex justify-between text-sm">
+                        <span class="text-gray-600">Used:</span>
+                        <span class="font-semibold">{{ user_profile.used_storage|filesizeformat }}</span>
+                    </div>
+                    <div class="flex justify-between text-sm">
+                        <span class="text-gray-600">Available:</span>
+                        <span class="font-semibold">{{ user_profile.storage_plan.max_storage_size|filesizeformat }}</span>
+                    </div>
+                    <div class="w-full bg-gray-200 rounded-full h-2">
+                        <div class="bg-blue-600 h-2 rounded-full" 
+                             style="width: {{ user_profile.get_storage_usage_percent }}%"></div>
+                    </div>
+                    <p class="text-xs text-gray-500 text-center">
+                        {{ user_profile.get_storage_usage_percent|floatformat:1 }}% used
+                    </p>
+                </div>
+            </div>
+
+            <!-- Quick Actions -->
+            <div class="glass-card rounded-3xl p-6">
+                <h3 class="text-lg font-semibold text-gray-900 mb-4">Quick Actions</h3>
+                <div class="space-y-3">
+                    <a href="{% url 'pricing_plans' %}" 
+                       class="w-full bg-blue-600 text-white py-3 px-4 rounded-xl font-semibold hover:bg-blue-700 transition-all duration-300 block text-center">
+                        Change Plan
+                    </a>
+                    <a href="{% url 'dashboard' %}" 
+                       class="w-full bg-gray-600 text-white py-3 px-4 rounded-xl font-semibold hover:bg-gray-700 transition-all duration-300 block text-center">
+                        Back to Dashboard
+                    </a>
+                </div>
+            </div>
+
+            <!-- Support -->
+            <div class="glass-card rounded-3xl p-6">
+                <h3 class="text-lg font-semibold text-gray-900 mb-4">Need Help?</h3>
+                <p class="text-gray-600 text-sm mb-4">
+                    Our support team is here to help with any billing questions.
+                </p>
+                <a href="#" class="text-blue-600 hover:text-blue-700 font-medium text-sm">
+                    <i class="fas fa-envelope mr-2"></i>
+                    Contact Support
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Cancel Confirmation Modal -->
+<div id="cancelModal" class="fixed inset-0 bg-black/50 backdrop-blur-sm hidden z-50">
+    <div class="flex items-center justify-center min-h-screen p-4">
+        <div class="glass-card rounded-3xl p-8 max-w-md w-full">
+            <h3 class="text-2xl font-bold text-gray-900 mb-4">Cancel Subscription?</h3>
+            <p class="text-gray-600 mb-6">
+                Are you sure you want to cancel your subscription? You'll continue to have access until 
+                <span class="font-semibold">{{ subscription.current_period_end|date:"F j, Y" }}</span>.
+            </p>
+            <div class="flex space-x-4">
+                <button onclick="hideCancelModal()" 
+                        class="flex-1 bg-gray-600 text-white py-3 px-6 rounded-2xl font-semibold hover:bg-gray-700 transition-all duration-300">
+                    Keep Subscription
+                </button>
+                <button onclick="confirmCancel()" 
+                        class="flex-1 bg-red-600 text-white py-3 px-6 rounded-2xl font-semibold hover:bg-red-700 transition-all duration-300">
+                    Yes, Cancel
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    function cancelSubscription() {
+        document.getElementById('cancelModal').classList.remove('hidden');
+    }
+
+    function hideCancelModal() {
+        document.getElementById('cancelModal').classList.add('hidden');
+    }
+
+    function confirmCancel() {
+        // Show loading state
+        const button = document.querySelector('#cancelModal button:last-child');
+        const originalText = button.innerHTML;
+        button.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Cancelling...';
+        button.disabled = true;
+
+        fetch('/subscription/cancel/', {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': '{{ csrf_token }}',
+                'Content-Type': 'application/json',
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                location.reload();
+            } else {
+                alert('Error: ' + data.error);
+                button.innerHTML = originalText;
+                button.disabled = false;
+                hideCancelModal();
+            }
+        })
+        .catch(error => {
+            alert('Error: ' + error);
+            button.innerHTML = originalText;
+            button.disabled = false;
+            hideCancelModal();
+        });
+    }
+</script>
+{% endblock %}

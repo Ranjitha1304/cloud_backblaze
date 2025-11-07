@@ -28,4 +28,15 @@ urlpatterns = [
     path('file/toggle-public/<uuid:file_id>/', views.toggle_file_visibility, name='toggle_file_visibility'),
     path('public/file/<uuid:file_id>/', views.public_file_access, name='public_file_access'),
 
+    path('pricing/', views.pricing_plans, name='pricing_plans'),
+    path('create-checkout-session/<str:plan_id>/', views.create_checkout_session, name='create_checkout_session'),
+    path('payment/success/', views.payment_success, name='payment_success'),
+    path('payment/cancel/', views.payment_cancel, name='payment_cancel'),
+    path('subscription/', views.subscription_management, name='subscription_management'),
+    path('subscription/cancel/', views.cancel_subscription, name='cancel_subscription'),
+
+    path('check-payment-status/', views.check_payment_status, name='check_payment_status'),
+
+    path('debug-plans/', views.debug_plans, name='debug_plans'),
+
 ]

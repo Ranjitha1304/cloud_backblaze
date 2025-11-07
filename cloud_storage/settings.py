@@ -63,6 +63,7 @@ TEMPLATES = [
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
+                'storage_app.context_processors.stripe_keys',
             ],
         },
     },
@@ -159,3 +160,13 @@ AWS_LOCATION = 'media'
 # Optional: File upload settings
 FILE_UPLOAD_MAX_MEMORY_SIZE = 100 * 1024 * 1024  # 100MB
 DATA_UPLAOD_MAX_MEMORY_SIZE = 100 * 1024 * 1024  # 100MB
+
+
+
+# Stripe Configuration
+STRIPE_PUBLISHABLE_KEY = 'pk_test_51RbOIoR2vlff5nNPNWBXrZWN1vpsZLxrxXRG0MqWANgDycBziueiuDz58csCXEnje39rSsFzzXvc6QaDX2DWmzcb00nONGofBE'
+STRIPE_SECRET_KEY = '******REMOVED******_51RbOIoR2vlff5nNPqyouXpWPqkNcfK5POTuHpmheWc1tMZ9NDY5aY9PjSwWJJM7tinsrOdiL0LttRwnQJVFQaytM002a5uU540'
+
+
+# Plan Configuration
+DEFAULT_PLAN = 'free'  # Default plan for new users
