@@ -80,13 +80,16 @@ from pathlib import Path
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-if os.environ.get("RENDER") or "PYTHONANYWHERE_DOMAIN" in os.environ:
+# Detect Render or PythonAnywhere Deploy Environment
+if os.environ.get("RENDER") or os.environ.get("PYTHONANYWHERE_DOMAIN"):
     DATABASES = {
         "default": {
             "ENGINE": "django.db.backends.sqlite3",
-            "NAME": BASE_DIR / "render_or_pythonanywhere_db.sqlite3",
+            "NAME": BASE_DIR / "deploy_db.sqlite3",
         }
     }
+
+# Local Development uses MySQL
 else:
     DATABASES = {
         'default': {
