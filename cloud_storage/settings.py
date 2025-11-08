@@ -75,16 +75,29 @@ WSGI_APPLICATION = 'cloud_storage.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
 
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.mysql',
-        'NAME': 'cloud_db',
-        'USER': 'root',
-        'PASSWORD': '1994',
-        'HOST': 'localhost',
-        'PORT': '3306',
+import os
+from pathlib import Path
+
+BASE_DIR = Path(__file__).resolve().parent.parent
+
+if os.environ.get("RENDER"):  # When running on Render
+    DATABASES = {
+        "default": {
+            "ENGINE": "django.db.backends.sqlite3",
+            "NAME": BASE_DIR / "render_db.sqlite3",
+        }
     }
-}
+else:  # Local development (your MySQL)
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.mysql',
+            'NAME': 'cloud_db',
+            'USER': 'root',
+            'PASSWORD': '1994',
+            'HOST': 'localhost',
+            'PORT': '3306',
+        }
+    }
 
 
 # Password validation
