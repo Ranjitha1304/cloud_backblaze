@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+        .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+        .header { background: linear-gradient(135deg, #28a745 0%, #20c997 100%); color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0; }
+        .content { background: #f9f9f9; padding: 30px; border-radius: 0 0 10px 10px; }
+        .plan-comparison { background: white; border-radius: 8px; padding: 20px; margin: 20px 0; border-left: 4px solid #28a745; }
+        .plan-card { background: white; border: 2px solid #28a745; border-radius: 8px; padding: 20px; margin: 20px 0; }
+        .feature-list { list-style: none; padding: 0; }
+        .feature-list li { padding: 8px 0; border-bottom: 1px solid #eee; }
+        .feature-list li:before { content: "✓ "; color: #28a745; font-weight: bold; }
+        .button { display: inline-block; background: #28a745; color: white; padding: 12px 30px; text-decoration: none; border-radius: 5px; margin: 10px 0; }
+        .footer { text-align: center; margin-top: 20px; color: #666; font-size: 12px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Subscription Upgraded! 🚀</h1>
+            <p>Your Cloud Storage plan has been successfully upgraded</p>
+        </div>
+        
+        <div class="content">
+            <h2>Hello {{ user.username }}!</h2>
+            <p>Great news! Your Cloud Storage subscription has been upgraded successfully.</p>
+            
+            <div class="plan-comparison">
+                <h3>Plan Change Summary</h3>
+                <p><strong>From:</strong> {{ old_plan.name }} ({{ old_plan.max_storage_size|filesizeformat }})</p>
+                <p><strong>To:</strong> {{ new_plan.name }} ({{ new_storage_limit_gb|floatformat:1 }} GB)</p>
+                <p><strong>New Price:</strong> ₹{{ new_plan.price }}/{{ new_plan.billing_period }}</p>
+            </div>
+            
+            <div class="plan-card">
+                <h3>Your New {{ new_plan.name }} Plan Includes:</h3>
+                <ul class="feature-list">
+                    <li>{{ new_storage_limit_gb|floatformat:1 }} GB Storage Space</li>
+                    <li>Advanced File Sharing</li>
+                    <li>Priority Support</li>
+                    <li>Enhanced Security Features</li>
+                    {% for feature in new_plan.features %}
+                    <li>{{ feature }}</li>
+                    {% endfor %}
+                </ul>
+            </div>
+            
+            <p><strong>What's Next?</strong></p>
+            <ul class="feature-list">
+                <li>Your new storage limit is available immediately</li>
+                <li>Continue uploading and organizing your files</li>
+                <li>Explore new features available in your plan</li>
+            </ul>
+            
+            <div style="text-align: center; margin: 30px 0;">
+                <a href="https://yourdomain.com/dashboard/" class="button">Go to Dashboard</a>
+            </div>
+            
+            <p>Thank you for upgrading! We're committed to providing you with the best cloud storage experience.</p>
+            
+            <p>Best regards,<br>The Cloud Storage Team</p>
+        </div>
+        
+        <div class="footer">
+            <p>© 2024 Cloud Storage. All rights reserved.</p>
+            <p>This email was sent to {{ user.email }} regarding your subscription change.</p>
+        </div>
+    </div>
+</body>
+</html>

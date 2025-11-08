@@ -115,6 +115,11 @@
                         <i class="fas fa-folder"></i>
                         <span>Files</span>
                     </a>
+                    <a href="{% url 'starred_files' %}" class="text-blue-800 hover:text-black transition-colors duration-200 flex items-center space-x-1">
+    <i class="fas fa-star"></i>
+    <span>Starred</span>
+</a>
+
                     <a href="{% url 'logout' %}" class="text-blue-800 hover:text-black transition-colors duration-200 flex items-center space-x-1">
                         <i class="fas fa-sign-out-alt"></i>
                         <span>Logout</span>

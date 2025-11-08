@@ -7,9 +7,9 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
         plans = [
             {'name': 'Free', 'max_storage_size': 500 * 1024 * 1024, 'price': 0},
-            {'name': 'Basic', 'max_storage_size': 5 * 1024 * 1024 * 1024, 'price': 4.99},
-            {'name': 'Pro', 'max_storage_size': 50 * 1024 * 1024 * 1024, 'price': 14.99},
-            {'name': 'Enterprise', 'max_storage_size': 500 * 1024 * 1024 * 1024, 'price': 49.99},
+            {'name': 'Basic', 'max_storage_size': 5 * 1024 * 1024 * 1024, 'price': 150},
+            {'name': 'Pro', 'max_storage_size': 50 * 1024 * 1024 * 1024, 'price': 500},
+            {'name': 'Enterprise', 'max_storage_size': 500 * 1024 * 1024 * 1024, 'price': 1500},
         ]
         
         for plan_data in plans:

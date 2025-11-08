@@ -2,7 +2,7 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth import login, logout, authenticate
 from django.contrib.auth.decorators import login_required
 from django.http import JsonResponse, HttpResponse, Http404
-from django.db.models import Sum
+from django.db.models import Sum, Q 
 from django.utils import timezone
 import os
 from .models import File, UserProfile, ShareLink, StoragePlan, Folder, Subscription
@@ -13,6 +13,11 @@ from datetime import datetime
 import stripe  
 from django.conf import settings
 import json
+
+from .utils import send_welcome_email, send_subscription_email, send_payment_success_email
+
+from django.db import models
+
 
 def register_view(request):
     if request.method == 'POST':
@@ -25,6 +30,14 @@ def register_view(request):
                 defaults={'max_storage_size': 500 * 1024 * 1024, 'price': 0}
             )[0]
             UserProfile.objects.create(user=user, storage_plan=free_plan)
+            
+            # Send welcome email
+            try:
+                send_welcome_email(user)
+            except Exception as e:
+                print(f"Failed to send welcome email: {e}")
+                # Continue with registration even if email fails
+            
             login(request, user)
             return redirect('dashboard')
     else:
@@ -73,14 +86,28 @@ def dashboard(request):
     user_profile.used_storage = total_size
     user_profile.save()
     
+    # Get view preference from session or default to 'grid'
+    view_mode = request.session.get('dashboard_view_mode', 'grid')
+    
     context = {
         'user_profile': user_profile,
-        'files': files[:10],
+        'files': files[:8],  # Show 8 recent files
         'total_files': total_files,
         'total_size': total_size,
         'storage_usage_percent': user_profile.get_storage_usage_percent(),
+        'view_mode': view_mode,  # Add view mode to context
     }
     return render(request, 'dashboard.html', context)
+
+@login_required
+def toggle_dashboard_view(request):
+    """Toggle between grid and list view for dashboard"""
+    if request.method == 'POST':
+        current_view = request.session.get('dashboard_view_mode', 'grid')
+        new_view = 'list' if current_view == 'grid' else 'grid'
+        request.session['dashboard_view_mode'] = new_view
+        return JsonResponse({'success': True, 'view_mode': new_view})
+    return JsonResponse({'success': False, 'error': 'Invalid request method'})
 
 @login_required
 def upload_file(request):
@@ -271,13 +298,31 @@ def share_file(request, token):
 
 @login_required
 def file_list(request, folder_id=None):
-    """File list with folder support"""
+    """File list with folder support and enhanced filtering"""
     current_folder = None
     if folder_id:
         current_folder = get_object_or_404(Folder, id=folder_id, owner=request.user)
     
-    # Get files in current folder
-    files = File.objects.filter(owner=request.user, folder=current_folder).order_by('-uploaded_at')
+    # Get base queryset
+    files = File.objects.filter(owner=request.user, folder=current_folder)
+    
+    # Apply file type filter
+    file_type_filter = request.GET.get('file_type', '')
+    if file_type_filter:
+        files = filter_files_by_type(files, file_type_filter)
+    
+    # Apply date filter
+    date_filter = request.GET.get('date_filter', '')
+    if date_filter:
+        files = filter_files_by_date(files, date_filter)
+    
+    # Apply starred filter
+    starred_filter = request.GET.get('starred', '')
+    if starred_filter == 'true':
+        files = files.filter(is_starred=True)
+    
+    # Order files
+    files = files.order_by('-uploaded_at')
     
     # Get folders in current folder
     folders = Folder.objects.filter(owner=request.user, parent_folder=current_folder).order_by('name')
@@ -288,14 +333,133 @@ def file_list(request, folder_id=None):
     # Folder creation form
     folder_form = FolderCreateForm()
     
+    # Get filter counts for UI
+    filter_counts = get_filter_counts(File.objects.filter(owner=request.user, folder=current_folder))
+    
     context = {
         'files': files,
         'folders': folders,
         'current_folder': current_folder,
         'all_folders': all_folders,
         'folder_form': folder_form,
+        'file_type_filter': file_type_filter,
+        'date_filter': date_filter,
+        'starred_filter': starred_filter == 'true',
+        'filter_counts': filter_counts,
     }
     return render(request, 'file_list.html', context)
+
+def filter_files_by_type(files_queryset, file_type):
+    """Filter files by file type category"""
+    file_type_groups = {
+        'image': ['.jpg', '.jpeg', '.png', '.gif', '.bmp', '.svg', '.webp'],
+        'document': ['.doc', '.docx', '.txt', '.rtf', '.odt'],
+        'pdf': ['.pdf'],
+        'spreadsheet': ['.xls', '.xlsx', '.csv', '.ods'],
+        'presentation': ['.ppt', '.pptx', '.odp'],
+        'video': ['.mp4', '.avi', '.mov', '.wmv', '.flv', '.webm', '.mkv'],
+        'audio': ['.mp3', '.wav', '.ogg', '.m4a', '.flac'],
+        'archive': ['.zip', '.rar', '.7z', '.tar', '.gz'],
+        'code': ['.html', '.css', '.js', '.py', '.java', '.cpp', '.c', '.php', '.xml', '.json'],
+    }
+    
+    if file_type in file_type_groups:
+        extensions = file_type_groups[file_type]
+        query = models.Q()
+        for ext in extensions:
+            query |= models.Q(file_type__iexact=ext)
+        return files_queryset.filter(query)
+    
+    # If specific extension is provided
+    elif file_type.startswith('.'):
+        return files_queryset.filter(file_type__iexact=file_type)
+    
+    return files_queryset
+
+def filter_files_by_date(files_queryset, date_filter):
+    """Filter files by date range"""
+    from django.utils import timezone
+    from datetime import timedelta
+    
+    now = timezone.now()
+    
+    if date_filter == 'today':
+        start_date = now.replace(hour=0, minute=0, second=0, microsecond=0)
+        return files_queryset.filter(uploaded_at__gte=start_date)
+    
+    elif date_filter == 'week':
+        start_date = now - timedelta(days=7)
+        return files_queryset.filter(uploaded_at__gte=start_date)
+    
+    elif date_filter == 'month':
+        start_date = now - timedelta(days=30)
+        return files_queryset.filter(uploaded_at__gte=start_date)
+    
+    elif date_filter == 'year':
+        start_date = now - timedelta(days=365)
+        return files_queryset.filter(uploaded_at__gte=start_date)
+    
+    return files_queryset
+
+def get_filter_counts(files_queryset):
+    """Get counts for each filter category"""
+    from django.db.models import Count
+    from django.utils import timezone
+    from datetime import timedelta
+    
+    now = timezone.now()
+    
+    # Date filter counts
+    today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
+    week_start = now - timedelta(days=7)
+    month_start = now - timedelta(days=30)
+    year_start = now - timedelta(days=365)
+    
+    date_counts = {
+        'today': files_queryset.filter(uploaded_at__gte=today_start).count(),
+        'week': files_queryset.filter(uploaded_at__gte=week_start).count(),
+        'month': files_queryset.filter(uploaded_at__gte=month_start).count(),
+        'year': files_queryset.filter(uploaded_at__gte=year_start).count(),
+        'all': files_queryset.count(),
+    }
+    
+    # File type counts
+    file_type_groups = {
+        'image': ['.jpg', '.jpeg', '.png', '.gif', '.bmp', '.svg', '.webp'],
+        'document': ['.doc', '.docx', '.txt', '.rtf', '.odt'],
+        'pdf': ['.pdf'],
+        'spreadsheet': ['.xls', '.xlsx', '.csv', '.ods'],
+        'presentation': ['.ppt', '.pptx', '.odp'],
+        'video': ['.mp4', '.avi', '.mov', '.wmv', '.flv', '.webm', '.mkv'],
+        'audio': ['.mp3', '.wav', '.ogg', '.m4a', '.flac'],
+        'archive': ['.zip', '.rar', '.7z', '.tar', '.gz'],
+        'code': ['.html', '.css', '.js', '.py', '.java', '.cpp', '.c', '.php', '.xml', '.json'],
+    }
+    
+    file_type_counts = {}
+    for file_type, extensions in file_type_groups.items():
+        query = models.Q()
+        for ext in extensions:
+            query |= models.Q(file_type__iexact=ext)
+        file_type_counts[file_type] = files_queryset.filter(query).count()
+    
+    # Count for "other" file types
+    all_extensions = []
+    for extensions in file_type_groups.values():
+        all_extensions.extend(extensions)
+    
+    file_type_counts['other'] = files_queryset.exclude(
+        file_type__in=all_extensions
+    ).count()
+    
+    # Starred count
+    starred_count = files_queryset.filter(is_starred=True).count()
+    
+    return {
+        'date': date_counts,
+        'file_type': file_type_counts,
+        'starred': starred_count,  # Add starred count
+    }
 
 @login_required
 def create_folder(request):
@@ -453,38 +617,64 @@ def pricing_plans(request):
 def create_checkout_session(request, plan_id):
     """Create Stripe checkout session - Fixed version"""
     try:
+        print(f"=== CHECKOUT SESSION DEBUG ===")
         print(f"Creating checkout session for plan ID: {plan_id}")
+        print(f"User: {request.user.username}, Email: {request.user.email}")
         
         # Simple approach - just get the plan by ID
         plan = get_object_or_404(StoragePlan, id=plan_id, is_active=True)
         user_profile = UserProfile.objects.get(user=request.user)
         
-        print(f"Plan found: {plan.name}, Price: ${plan.price}")
+        print(f"Plan found: {plan.name}, Price: Rs.{plan.price}")
+        print(f"Current user plan: {user_profile.storage_plan.name}, Price: Rs.{user_profile.storage_plan.price}")
         
         # Check if it's a free plan
         if plan.price == 0:
-            print("Handling free plan")
+            print("🆓 Handling FREE plan selection")
+            # Store old plan for email
+            old_plan = user_profile.storage_plan
+
+            print(f"Free plan selection - Old: {old_plan.name}, New: {plan.name}")
+            print(f"Should send downgrade email: {old_plan.price > plan.price}")
+
             # Handle free plan selection
             user_profile.storage_plan = plan
             user_profile.save()
+            print("✅ Free plan updated in database")
+
+            # Send subscription change email for downgrade
+            try:
+                if old_plan.price > plan.price:  # Only send for downgrades to free
+                    print("📧 Sending downgrade email for free plan selection")
+                    email_sent = send_subscription_email(request.user, old_plan, plan, 'downgrade')
+                    print(f"Downgrade email sent: {email_sent}")
+                else:
+                    print("ℹ️ No downgrade email sent - not a downgrade scenario")
+            except Exception as e:
+                print(f"❌ Failed to send subscription email: {e}")
+                import traceback
+                print(f"Free plan email error: {traceback.format_exc()}")
+
+            print("🔄 Redirecting to dashboard after free plan selection")
             return JsonResponse({
                 'success': True,
                 'message': f'Switched to {plan.name} plan successfully',
-                'redirect_url': '/payment/success/'  # Use direct URL instead of reverse
+                'redirect_url': '/dashboard/'  # Changed to dashboard for free plans
             })
         
         # For paid plans, check if Stripe price ID exists
         if not plan.stripe_price_id:
-            print("No Stripe price ID found")
+            print("❌ No Stripe price ID found")
             return JsonResponse({
                 'error': 'This plan is not configured for payments. Please contact support.'
             }, status=400)
         
+        print(f"💰 Processing PAID plan: {plan.name}")
         print(f"Stripe price ID: {plan.stripe_price_id}")
         
         # Create or get Stripe customer for paid plans
         if not user_profile.stripe_customer_id:
-            print("Creating new Stripe customer")
+            print("👤 Creating new Stripe customer")
             customer = stripe.Customer.create(
                 email=request.user.email,
                 name=request.user.username,
@@ -492,9 +682,16 @@ def create_checkout_session(request, plan_id):
             )
             user_profile.stripe_customer_id = customer.id
             user_profile.save()
+            print(f"✅ Stripe customer created: {user_profile.stripe_customer_id}")
         
         # Create checkout session with direct URLs
-        print("Creating Stripe checkout session")
+        print("🛒 Creating Stripe checkout session")
+        success_url = request.build_absolute_uri('/payment/success/') + '?session_id={CHECKOUT_SESSION_ID}'
+        cancel_url = request.build_absolute_uri('/payment/cancel/')
+        
+        print(f"Success URL: {success_url}")
+        print(f"Cancel URL: {cancel_url}")
+        
         checkout_session = stripe.checkout.Session.create(
             customer=user_profile.stripe_customer_id,
             payment_method_types=['card'],
@@ -503,28 +700,35 @@ def create_checkout_session(request, plan_id):
                 'quantity': 1,
             }],
             mode='subscription',
-            success_url=request.build_absolute_uri('/payment/success/') + '?session_id={CHECKOUT_SESSION_ID}',
-            cancel_url=request.build_absolute_uri('/payment/cancel/'),
+            success_url=success_url,
+            cancel_url=cancel_url,
             metadata={
                 'plan_id': str(plan.id),
                 'user_id': str(request.user.id)
             }
         )
         
-        print(f"Checkout session created: {checkout_session.url}")
+        print(f"✅ Checkout session created: {checkout_session.url}")
+        print(f"🔗 Checkout URL: {checkout_session.url}")
         return JsonResponse({'checkout_url': checkout_session.url})
         
     except Exception as e:
-        print(f"Checkout session error: {e}")
+        print(f"❌ Checkout session error: {e}")
         import traceback
         print(traceback.format_exc())
         return JsonResponse({'error': str(e)}, status=400)
-            
+                    
 
 @login_required
 def payment_success(request):
     """Handle successful payment - Check status immediately"""
     session_id = request.GET.get('session_id')
+    
+    # Add debug logging at the start of payment_success
+    print(f"=== PAYMENT SUCCESS DEBUG ===")
+    print(f"User: {request.user.username}")
+    print(f"User email: {request.user.email}")
+    print(f"Session ID: {session_id}")
     
     if session_id:
         try:
@@ -536,18 +740,41 @@ def payment_success(request):
                 plan_id = session.metadata.get('plan_id')
                 user_id = session.metadata.get('user_id')
                 
+                print(f"Plan ID: {plan_id}")
+                print(f"User ID from session: {user_id}, Current user ID: {request.user.id}")
+                
                 if str(request.user.id) == user_id:
                     plan = StoragePlan.objects.get(id=plan_id)
                     user_profile = UserProfile.objects.get(user=request.user)
                     
+                    # Store old plan for email
+                    old_plan = user_profile.storage_plan
+                    
+                    print(f"=== PLAN COMPARISON DEBUG ===")
+                    print(f"Old plan: {old_plan.name} (ID: {old_plan.id}, Price: {old_plan.price})")
+                    print(f"New plan: {plan.name} (ID: {plan.id}, Price: {plan.price})")
+                    print(f"Plan IDs different: {old_plan.id != plan.id}")
+                    print(f"Old price type: {type(old_plan.price)}, Value: {old_plan.price}")
+                    print(f"New price type: {type(plan.price)}, Value: {plan.price}")
+                    
+                    # Convert to float for safe comparison
+                    old_price = float(old_plan.price) if old_plan.price else 0.0
+                    new_price = float(plan.price) if plan.price else 0.0
+                    
+                    print(f"Float comparison - Old: {old_price}, New: {new_price}")
+                    print(f"Upgrade condition (old < new): {old_price < new_price}")
+                    print(f"Downgrade condition (old > new): {old_price > new_price}")
+                    print(f"Same price condition (old == new): {old_price == new_price}")
+                    
                     # Update user's plan immediately
                     user_profile.storage_plan = plan
                     user_profile.save()
+                    print("User plan updated in database")
                     
                     # Get subscription details
                     subscription = stripe.Subscription.retrieve(session.subscription)
                     
-                    # Create subscription record - fix datetime conversion
+                    # Create subscription record
                     Subscription.objects.update_or_create(
                         stripe_subscription_id=subscription.id,
                         defaults={
@@ -559,24 +786,64 @@ def payment_success(request):
                             'cancel_at_period_end': subscription.cancel_at_period_end,
                         }
                     )
+                    print("Subscription record created/updated")
+                    
+                    # Send subscription upgrade email - FIXED LOGIC
+                    print(f"=== EMAIL SENDING DEBUG ===")
+                    try:
+                        # Always send email if plan actually changed
+                        if old_plan.id != plan.id:
+                            print(f"Plans are different - proceeding with email sending")
+                            
+                            if old_price < new_price:
+                                print("🔺 SENDING UPGRADE EMAIL")
+                                email_sent = send_subscription_email(request.user, old_plan, plan, 'upgrade')
+                                print(f"Upgrade email sent: {email_sent}")
+                            elif old_price > new_price:
+                                print("🔻 SENDING DOWNGRADE EMAIL")
+                                email_sent = send_subscription_email(request.user, old_plan, plan, 'downgrade')
+                                print(f"Downgrade email sent: {email_sent}")
+                            else:
+                                print("🔄 SENDING CHANGE EMAIL (same price)")
+                                email_sent = send_subscription_email(request.user, old_plan, plan, 'change')
+                                print(f"Change email sent: {email_sent}")
+                            
+                            print("💰 SENDING PAYMENT SUCCESS EMAIL")
+                            payment_email_sent = send_payment_success_email(request.user, plan, plan.price)
+                            print(f"Payment success email sent: {payment_email_sent}")
+                            
+                        else:
+                            print("❌ No email sent - Plan ID is the same (no change)")
+                            
+                    except Exception as e:
+                        print(f"❌ ERROR sending subscription email: {e}")
+                        import traceback
+                        print(f"Email error traceback: {traceback.format_exc()}")
                     
                     return render(request, 'payment_success.html', {
                         'plan': plan,
                         'subscription_id': subscription.id
                     })
+                else:
+                    print(f"❌ User ID mismatch! Session user: {user_id}, Current user: {request.user.id}")
             else:
+                print(f"❌ Payment not completed yet. Status: {session.payment_status}")
                 # Payment not completed yet
                 return render(request, 'payment_processing.html', {
                     'session_id': session_id
                 })
                 
         except Exception as e:
-            print(f"Payment success error: {e}")
+            print(f"❌ Payment success error: {e}")
             import traceback
-            print(traceback.format_exc())
+            print(f"Full traceback: {traceback.format_exc()}")
+    
+    else:
+        print("❌ No session ID provided in request")
     
     # If anything fails, show generic success page
     return render(request, 'payment_success.html')
+
 
 @login_required
 def check_payment_status(request):
@@ -783,3 +1050,204 @@ def debug_plans(request):
         })
     
     return JsonResponse({'plans': plan_data})
+
+
+@login_required
+def test_subscription_email(request):
+    """Test endpoint to manually trigger subscription emails"""
+    try:
+        user = request.user
+        user_profile = UserProfile.objects.get(user=user)
+        
+        # Get two different plans for testing
+        free_plan = StoragePlan.objects.filter(plan_type='free').first()
+        paid_plan = StoragePlan.objects.filter(plan_type='basic').first() or StoragePlan.objects.filter(plan_type='pro').first()
+        
+        if not free_plan or not paid_plan:
+            return JsonResponse({'error': 'Need at least two different plans for testing'})
+        
+        print(f"=== MANUAL EMAIL TEST ===")
+        print(f"Testing with user: {user.username} ({user.email})")
+        print(f"Current plan: {user_profile.storage_plan.name}")
+        print(f"Test plans - Free: {free_plan.name}, Paid: {paid_plan.name}")
+        
+        # Test upgrade email
+        print("Testing UPGRADE email...")
+        upgrade_result = send_subscription_email(user, free_plan, paid_plan, 'upgrade')
+        print(f"Upgrade email result: {upgrade_result}")
+        
+        # Test downgrade email  
+        print("Testing DOWNGRADE email...")
+        downgrade_result = send_subscription_email(user, paid_plan, free_plan, 'downgrade')
+        print(f"Downgrade email result: {downgrade_result}")
+        
+        # Test payment success email
+        print("Testing PAYMENT SUCCESS email...")
+        payment_result = send_payment_success_email(user, paid_plan, paid_plan.price)
+        print(f"Payment success email result: {payment_result}")
+        
+        return JsonResponse({
+            'success': True,
+            'upgrade_email_sent': upgrade_result,
+            'downgrade_email_sent': downgrade_result,
+            'payment_email_sent': payment_result,
+            'message': 'Check server console for detailed logs'
+        })
+        
+    except Exception as e:
+        print(f"Test email error: {e}")
+        import traceback
+        print(traceback.format_exc())
+        return JsonResponse({'error': str(e)})
+    
+
+@login_required
+def debug_payment_flow(request):
+    """Debug view to test the payment flow"""
+    print("=== PAYMENT FLOW DEBUG ===")
+    print(f"User: {request.user.username}")
+    print(f"User email: {request.user.email}")
+    
+    # Test email functionality
+    from .utils import test_email_functionality, debug_email_settings
+    debug_email_settings()
+    test_result = test_email_functionality(request.user)
+    
+    # Test subscription email directly
+    from .utils import send_subscription_email, send_payment_success_email
+    from .models import StoragePlan
+    
+    free_plan = StoragePlan.objects.filter(plan_type='free').first()
+    paid_plan = StoragePlan.objects.exclude(plan_type='free').first()
+    
+    if free_plan and paid_plan:
+        print("Testing subscription emails...")
+        upgrade_result = send_subscription_email(request.user, free_plan, paid_plan, 'upgrade')
+        downgrade_result = send_subscription_email(request.user, paid_plan, free_plan, 'downgrade')
+        payment_result = send_payment_success_email(request.user, paid_plan, paid_plan.price)
+        
+        print(f"Upgrade email: {upgrade_result}")
+        print(f"Downgrade email: {downgrade_result}")
+        print(f"Payment email: {payment_result}")
+    
+    return JsonResponse({
+        'test_email_sent': test_result,
+        'message': 'Check server console for debug information'
+    })    
+
+
+
+@login_required
+def toggle_star_file(request, file_id):
+    """Toggle star status for a file"""
+    if request.method == 'POST':
+        try:
+            file_obj = get_object_or_404(File, id=file_id, owner=request.user)
+            file_obj.is_starred = not file_obj.is_starred
+            file_obj.save()
+            
+            return JsonResponse({
+                'success': True, 
+                'is_starred': file_obj.is_starred,
+                'message': f'File {"starred" if file_obj.is_starred else "unstarred"} successfully'
+            })
+        except Exception as e:
+            return JsonResponse({'success': False, 'error': str(e)})
+    
+    return JsonResponse({'success': False, 'error': 'Invalid request method'})
+
+@login_required
+def starred_files(request):
+    """View to show only starred files"""
+    files = File.objects.filter(owner=request.user, is_starred=True).order_by('-uploaded_at')
+    folders = Folder.objects.filter(owner=request.user, parent_folder=None).order_by('name')
+    
+    # Get filter counts for UI
+    filter_counts = get_filter_counts(File.objects.filter(owner=request.user))
+    
+    context = {
+        'files': files,
+        'folders': folders,
+        'current_folder': None,
+        'all_folders': Folder.objects.filter(owner=request.user),
+        'folder_form': FolderCreateForm(),
+        'file_type_filter': '',
+        'date_filter': '',
+        'starred_filter': True,  # Add this to indicate we're in starred view
+        'filter_counts': filter_counts,
+    }
+    return render(request, 'file_list.html', context)
+
+
+@login_required
+def preview_file(request, file_id):
+    """Preview file directly in browser"""
+    try:
+        file_obj = get_object_or_404(File, id=file_id, owner=request.user)
+        
+        # Generate a fresh signed URL for preview (inline display)
+        import boto3
+        from botocore.client import Config
+        
+        s3_client = boto3.client(
+            's3',
+            endpoint_url=settings.AWS_S3_ENDPOINT_URL,
+            aws_access_key_id=settings.AWS_ACCESS_KEY_ID,
+            aws_secret_access_key=settings.AWS_SECRET_ACCESS_KEY,
+            config=Config(signature_version='s3v4')
+        )
+        
+        # Find the correct file key
+        file_key = file_obj.file.name
+        possible_keys = [
+            file_key,
+            f"media/{file_key}",
+        ]
+        
+        actual_key = file_key
+        for test_key in possible_keys:
+            try:
+                s3_client.head_object(Bucket=settings.AWS_STORAGE_BUCKET_NAME, Key=test_key)
+                actual_key = test_key
+                break
+            except:
+                continue
+        
+        # Generate presigned URL for inline viewing (not download)
+        presigned_url = s3_client.generate_presigned_url(
+            'get_object',
+            Params={
+                'Bucket': settings.AWS_STORAGE_BUCKET_NAME,
+                'Key': actual_key,
+                'ResponseContentDisposition': 'inline'  # This makes it open in browser
+            },
+            ExpiresIn=3600  # 1 hour
+        )
+        
+        # Determine file category for appropriate preview
+        file_type = file_obj.file_type.lower()
+        
+        # Files that can be previewed directly in browser
+        previewable_types = {
+            'image': ['.jpg', '.jpeg', '.png', '.gif', '.bmp', '.svg', '.webp'],
+            'pdf': ['.pdf'],
+            'text': ['.txt', '.csv', '.log'],
+            'code': ['.html', '.css', '.js', '.py', '.java', '.cpp', '.c', '.php', '.xml', '.json'],
+        }
+        
+        file_category = 'other'
+        for category, extensions in previewable_types.items():
+            if file_type in extensions:
+                file_category = category
+                break
+        
+        context = {
+            'file': file_obj,
+            'preview_url': presigned_url,
+            'file_category': file_category,
+        }
+        
+        return render(request, 'file_preview.html', context)
+        
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)})

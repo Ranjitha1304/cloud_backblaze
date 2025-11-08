@@ -41,26 +41,150 @@
             </div>
 
             <!-- Search Bar -->
-            <div class="mt-6">
-                <div class="relative">
-                    <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                        <i class="fas fa-search text-gray-400 text-lg"></i>
-                    </div>
-                    <input type="text" 
-                           id="searchInput"
-                           class="block w-full pl-12 pr-12 py-4 border-0 bg-white/80 rounded-2xl text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-4 focus:ring-blue-200 focus:bg-white transition-all duration-300 shadow-lg"
-                           placeholder="Search files and folders..."
-                           onkeyup="performSearch()">
-                    <div class="absolute inset-y-0 right-0 pr-4 flex items-center">
-                        <button onclick="clearSearch()" 
-                                class="text-gray-400 hover:text-gray-600 transition-colors hidden transform hover:scale-110"
-                                id="clearSearchBtn">
-                            <i class="fas fa-times text-lg"></i>
-                        </button>
+<!-- Search and Filters Section -->
+<div class="mt-6 space-y-4">
+    <!-- Search Bar -->
+    <div class="relative">
+        <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+            <i class="fas fa-search text-gray-400 text-lg"></i>
+        </div>
+        <input type="text" 
+               id="searchInput"
+               class="block w-full pl-12 pr-12 py-4 border-0 bg-white/80 rounded-2xl text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-4 focus:ring-blue-200 focus:bg-white transition-all duration-300 shadow-lg"
+               placeholder="Search files and folders..."
+               onkeyup="performSearch()">
+        <div class="absolute inset-y-0 right-0 pr-4 flex items-center">
+            <button onclick="clearSearch()" 
+                    class="text-gray-400 hover:text-gray-600 transition-colors hidden transform hover:scale-110"
+                    id="clearSearchBtn">
+                <i class="fas fa-times text-lg"></i>
+            </button>
+        </div>
+    </div>
+
+    <!-- Enhanced Filters -->
+    <div class="glass-card rounded-2xl p-6">
+        <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+            <div class="flex items-center space-x-3">
+                <i class="fas fa-filter text-blue-500 text-lg"></i>
+                <span class="font-semibold text-gray-700">Filter Files:</span>
+            </div>
+            
+            <div class="flex flex-wrap gap-3">
+                <!-- File Type Filter -->
+                <div class="relative group">
+<!-- Add this option to the file type filter dropdown -->
+<select id="fileTypeFilter" 
+        onchange="applyFilters()"
+        class="appearance-none bg-white/80 border-0 rounded-xl pl-4 pr-10 py-3 text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-200 focus:bg-white transition-all duration-300 shadow-lg cursor-pointer">
+    <option value="">All File Types</option>
+    <option value="starred" {% if file_type_filter == 'starred' %}selected{% endif %}>
+        ⭐ Starred ({{ filter_counts.starred }})
+    </option>
+    <option value="image" {% if file_type_filter == 'image' %}selected{% endif %}>
+        Images ({{ filter_counts.file_type.image }})
+    </option>
+    <option value="document" {% if file_type_filter == 'document' %}selected{% endif %}>
+        Documents ({{ filter_counts.file_type.document }})
+    </option>
+    <option value="pdf" {% if file_type_filter == 'pdf' %}selected{% endif %}>
+        PDFs ({{ filter_counts.file_type.pdf }})
+    </option>
+    <option value="spreadsheet" {% if file_type_filter == 'spreadsheet' %}selected{% endif %}>
+        Spreadsheets ({{ filter_counts.file_type.spreadsheet }})
+    </option>
+    <option value="presentation" {% if file_type_filter == 'presentation' %}selected{% endif %}>
+        Presentations ({{ filter_counts.file_type.presentation }})
+    </option>
+    <option value="video" {% if file_type_filter == 'video' %}selected{% endif %}>
+        Videos ({{ filter_counts.file_type.video }})
+    </option>
+    <option value="audio" {% if file_type_filter == 'audio' %}selected{% endif %}>
+        Audio ({{ filter_counts.file_type.audio }})
+    </option>
+    <option value="archive" {% if file_type_filter == 'archive' %}selected{% endif %}>
+        Archives ({{ filter_counts.file_type.archive }})
+    </option>
+    <option value="code" {% if file_type_filter == 'code' %}selected{% endif %}>
+        Code ({{ filter_counts.file_type.code }})
+    </option>
+    <option value="other" {% if file_type_filter == 'other' %}selected{% endif %}>
+        Other ({{ filter_counts.file_type.other }})
+    </option>
+</select>
+                    <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-gray-500">
+                        <i class="fas fa-chevron-down"></i>
                     </div>
                 </div>
-                <div id="searchResultsInfo" class="mt-3 text-sm text-gray-600 hidden bg-white/50 rounded-xl p-3"></div>
+
+                <!-- Date Filter -->
+                <div class="relative group">
+                    <select id="dateFilter" 
+                            onchange="applyFilters()"
+                            class="appearance-none bg-white/80 border-0 rounded-xl pl-4 pr-10 py-3 text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-200 focus:bg-white transition-all duration-300 shadow-lg cursor-pointer">
+                        <option value="">All Time</option>
+                        <option value="today" {% if date_filter == 'today' %}selected{% endif %}>
+                            Today ({{ filter_counts.date.today }})
+                        </option>
+                        <option value="week" {% if date_filter == 'week' %}selected{% endif %}>
+                            Last 7 Days ({{ filter_counts.date.week }})
+                        </option>
+                        <option value="month" {% if date_filter == 'month' %}selected{% endif %}>
+                            Last 30 Days ({{ filter_counts.date.month }})
+                        </option>
+                        <option value="year" {% if date_filter == 'year' %}selected{% endif %}>
+                            Last Year ({{ filter_counts.date.year }})
+                        </option>
+                    </select>
+                    <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-gray-500">
+                        <i class="fas fa-calendar"></i>
+                    </div>
+                </div>
+
+                <!-- Clear Filters Button -->
+                {% if file_type_filter or date_filter %}
+                <button onclick="clearFilters()" 
+                        class="bg-red-500 text-white px-4 py-3 rounded-xl font-semibold hover:bg-red-600 transition-all duration-300 transform hover:scale-105 flex items-center space-x-2 shadow-lg">
+                    <i class="fas fa-times"></i>
+                    <span>Clear Filters</span>
+                </button>
+                {% endif %}
             </div>
+        </div>
+
+        <!-- Active Filters Display -->
+        {% if file_type_filter or date_filter %}
+        <div class="mt-4 pt-4 border-t border-gray-200/50">
+            <div class="flex flex-wrap gap-2 items-center">
+                <span class="text-sm font-medium text-gray-600">Active Filters:</span>
+                
+                {% if file_type_filter %}
+                <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-blue-100 text-blue-800">
+                    <i class="fas fa-file mr-1"></i>
+                    {{ file_type_filter|title }}
+                    <button onclick="removeFilter('file_type')" class="ml-2 hover:text-blue-600">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </span>
+                {% endif %}
+                
+                {% if date_filter %}
+                <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-800">
+                    <i class="fas fa-calendar mr-1"></i>
+                    {{ date_filter|title }}
+                    <button onclick="removeFilter('date_filter')" class="ml-2 hover:text-green-600">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </span>
+                {% endif %}
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<div id="searchResultsInfo" class="mt-3 text-sm text-gray-600 hidden bg-white/50 rounded-xl p-3"></div>
+
         </div>
     </div>
 
@@ -111,10 +235,13 @@
                     <i class="fas fa-file text-blue-500"></i>
                     <span>{% if current_folder %}Files in {{ current_folder.name }}{% else %}All Files{% endif %}</span>
                 </h2>
-                <span class="text-sm font-medium text-gray-600 bg-white/50 rounded-full px-4 py-2" id="filesCount">
-                    {{ files|length }} file{{ files|length|pluralize }}
-                </span>
-            </div>
+<span class="text-sm font-medium text-gray-600 bg-white/50 rounded-full px-4 py-2" id="filesCount">
+    {{ files|length }} file{{ files|length|pluralize }}
+    {% if file_type_filter or date_filter %}
+    <span class="text-blue-600">(Filtered)</span>
+    {% endif %}
+</span>            
+</div>
             
             <div class="px-6 py-6">
                 {% if files %}
@@ -186,7 +313,6 @@
                                                     {% endif %}
                                                 </div>
                                             </div>
-                                            <p class="text-xs text-gray-500">ID: {{ file.id }}</p>
                                         </div>
                                     </div>
                                 </td>
@@ -203,6 +329,11 @@
                                 </td>
                                 <td class="px-6 py-5 whitespace-nowrap">
                                     <div class="flex space-x-2">
+                                        <button onclick="toggleStar('{{ file.id }}', this)" 
+                class="w-10 h-10 rounded-xl flex items-center justify-center transition-all duration-200 transform hover:scale-110 group {% if file.is_starred %}bg-yellow-100 text-yellow-600 hover:bg-yellow-200{% else %}bg-gray-100 text-gray-600 hover:bg-gray-200{% endif %}"
+                title="{% if file.is_starred %}Remove from starred{% else %}Add to starred{% endif %}">
+            <i class="fas {% if file.is_starred %}fa-star{% else %}fa-star{% endif %} group-hover:animate-pulse"></i>
+        </button>
                                         <!-- Download Button -->
                                         <a href="{% url 'download_file' file.id %}" 
                                            class="w-10 h-10 bg-blue-100 rounded-xl flex items-center justify-center text-blue-600 hover:bg-blue-200 transition-all duration-200 transform hover:scale-110 group"
@@ -953,5 +1084,410 @@
             el.style.transition = 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)';
         });
     });
+
+
+
+    // Filter functionality
+function applyFilters() {
+    const fileTypeFilter = document.getElementById('fileTypeFilter').value;
+    const dateFilter = document.getElementById('dateFilter').value;
+    
+    const params = new URLSearchParams();
+    
+    if (fileTypeFilter) {
+        params.set('file_type', fileTypeFilter);
+    }
+    
+    if (dateFilter) {
+        params.set('date_filter', dateFilter);
+    }
+    
+    // Get current URL without query parameters
+    const currentUrl = window.location.pathname;
+    
+    // Navigate to the filtered URL
+    window.location.href = currentUrl + (params.toString() ? '?' + params.toString() : '');
+}
+
+function clearFilters() {
+    // Navigate to current URL without any query parameters
+    window.location.href = window.location.pathname;
+}
+
+function removeFilter(filterType) {
+    const params = new URLSearchParams(window.location.search);
+    params.delete(filterType);
+    
+    // Navigate to URL without the removed filter
+    window.location.href = window.location.pathname + (params.toString() ? '?' + params.toString() : '');
+}
+
+// Update search to preserve filters
+function performSearch() {
+    const searchTerm = document.getElementById('searchInput').value.trim().toLowerCase();
+    const clearSearchBtn = document.getElementById('clearSearchBtn');
+    
+    if (searchTerm.length > 0) {
+        clearSearchBtn.classList.remove('hidden');
+        setTimeout(() => clearSearchBtn.classList.add('opacity-100'), 10);
+    } else {
+        clearSearchBtn.classList.add('hidden');
+        showNormalView();
+        return;
+    }
+
+    clearTimeout(searchTimeout);
+    
+    searchTimeout = setTimeout(() => {
+        searchFilesAndFolders(searchTerm);
+    }, 300);
+}
+
+// Enhanced search that considers active filters
+function searchFilesAndFolders(searchTerm) {
+    const normalView = document.getElementById('normalView');
+    const searchResultsView = document.getElementById('searchResultsView');
+    const searchResultsInfo = document.getElementById('searchResultsInfo');
+    
+    // Get current filters
+    const fileTypeFilter = document.getElementById('fileTypeFilter').value;
+    const dateFilter = document.getElementById('dateFilter').value;
+    
+    // Animate transition
+    normalView.style.opacity = '0';
+    setTimeout(() => {
+        normalView.classList.add('hidden');
+        searchResultsView.classList.remove('hidden');
+        searchResultsView.style.opacity = '0';
+        setTimeout(() => searchResultsView.style.opacity = '1', 50);
+    }, 300);
+    
+    searchFolders(searchTerm);
+    searchFiles(searchTerm, fileTypeFilter, dateFilter);
+    updateSearchInfo(searchTerm, fileTypeFilter, dateFilter);
+}
+
+function searchFiles(searchTerm, fileTypeFilter, dateFilter) {
+    const filesContainer = document.getElementById('searchFilesContainer');
+    const noFilesResults = document.getElementById('noFilesResults');
+    const originalFileItems = document.querySelectorAll('#filesContainer .file-item');
+    
+    let foundFiles = 0;
+    filesContainer.innerHTML = '';
+    
+    originalFileItems.forEach(file => {
+        const fileName = file.querySelector('.file-name').textContent.toLowerCase();
+        const fileType = file.querySelector('.file-type').textContent.toLowerCase();
+        const fileDate = file.querySelector('.file-uploaded').textContent;
+        
+        // Check if file matches search term
+        const matchesSearch = fileName.includes(searchTerm) || fileType.includes(searchTerm);
+        
+        // Check if file matches current filters
+        const matchesFileType = !fileTypeFilter || fileTypeMatches(fileType, fileTypeFilter);
+        const matchesDate = !dateFilter || dateMatches(fileDate, dateFilter);
+        
+        if (matchesSearch && matchesFileType && matchesDate) {
+            const clone = file.cloneNode(true);
+            const fileNameElement = clone.querySelector('.file-name');
+            const originalName = fileNameElement.textContent;
+            const highlightedName = highlightText(originalName, searchTerm);
+            fileNameElement.innerHTML = highlightedName;
+            
+            filesContainer.appendChild(clone);
+            foundFiles++;
+        }
+    });
+    
+    if (foundFiles === 0) {
+        noFilesResults.classList.remove('hidden');
+    } else {
+        noFilesResults.classList.add('hidden');
+    }
+}
+
+function fileTypeMatches(fileType, filterType) {
+    const fileTypeGroups = {
+        'image': ['.jpg', '.jpeg', '.png', '.gif', '.bmp', '.svg', '.webp'],
+        'document': ['.doc', '.docx', '.txt', '.rtf', '.odt'],
+        'pdf': ['.pdf'],
+        'spreadsheet': ['.xls', '.xlsx', '.csv', '.ods'],
+        'presentation': ['.ppt', '.pptx', '.odp'],
+        'video': ['.mp4', '.avi', '.mov', '.wmv', '.flv', '.webm', '.mkv'],
+        'audio': ['.mp3', '.wav', '.ogg', '.m4a', '.flac'],
+        'archive': ['.zip', '.rar', '.7z', '.tar', '.gz'],
+        'code': ['.html', '.css', '.js', '.py', '.java', '.cpp', '.c', '.php', '.xml', '.json'],
+    };
+    
+    if (filterType in fileTypeGroups) {
+        return fileTypeGroups[filterType].includes(fileType.toLowerCase());
+    }
+    
+    return fileType.toLowerCase() === filterType.toLowerCase();
+}
+
+function dateMatches(fileDate, dateFilter) {
+    // This is a simplified check - in a real implementation, you'd want more robust date parsing
+    const fileDateObj = new Date(fileDate);
+    const now = new Date();
+    
+    switch (dateFilter) {
+        case 'today':
+            return fileDateObj.toDateString() === now.toDateString();
+        case 'week':
+            const weekAgo = new Date(now - 7 * 24 * 60 * 60 * 1000);
+            return fileDateObj >= weekAgo;
+        case 'month':
+            const monthAgo = new Date(now - 30 * 24 * 60 * 60 * 1000);
+            return fileDateObj >= monthAgo;
+        case 'year':
+            const yearAgo = new Date(now - 365 * 24 * 60 * 60 * 1000);
+            return fileDateObj >= yearAgo;
+        default:
+            return true;
+    }
+}
+
+function updateSearchInfo(searchTerm, fileTypeFilter, dateFilter) {
+    const searchResultsInfo = document.getElementById('searchResultsInfo');
+    const foundFolders = document.querySelectorAll('#searchFoldersContainer .folder-item').length;
+    const foundFiles = document.querySelectorAll('#searchFilesContainer .file-item').length;
+    
+    let infoText = `Search results for "<span class="font-semibold">${searchTerm}</span>"`;
+    
+    // Add filter information
+    if (fileTypeFilter || dateFilter) {
+        infoText += ` with filters: `;
+        const filters = [];
+        if (fileTypeFilter) filters.push(`<span class="text-blue-600 font-semibold">${fileTypeFilter}</span>`);
+        if (dateFilter) filters.push(`<span class="text-green-600 font-semibold">${dateFilter}</span>`);
+        infoText += filters.join(' and ');
+    }
+    
+    infoText += ` - `;
+    
+    if (foundFolders > 0 && foundFiles > 0) {
+        infoText += `<span class="text-blue-600 font-semibold">${foundFolders} folder${foundFolders !== 1 ? 's' : ''}</span> and <span class="text-green-600 font-semibold">${foundFiles} file${foundFiles !== 1 ? 's' : ''}</span> found`;
+    } else if (foundFolders > 0) {
+        infoText += `<span class="text-blue-600 font-semibold">${foundFolders} folder${foundFolders !== 1 ? 's' : ''}</span> found`;
+    } else if (foundFiles > 0) {
+        infoText += `<span class="text-green-600 font-semibold">${foundFiles} file${foundFiles !== 1 ? 's' : ''}</span> found`;
+    } else {
+        infoText += 'No results found';
+    }
+    
+    searchResultsInfo.innerHTML = infoText;
+    searchResultsInfo.classList.remove('hidden');
+}
+
+
+// Star functionality
+function toggleStar(fileId, element) {
+    const starBtn = element.closest('button');
+    const originalHtml = starBtn.innerHTML;
+    
+    starBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+    starBtn.disabled = true;
+    
+    fetch(`/file/star/${fileId}/`, {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': '{{ csrf_token }}',
+            'Content-Type': 'application/json',
+        },
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // Update star appearance
+            if (data.is_starred) {
+                starBtn.classList.remove('bg-gray-100', 'text-gray-600', 'hover:bg-gray-200');
+                starBtn.classList.add('bg-yellow-100', 'text-yellow-600', 'hover:bg-yellow-200');
+                starBtn.innerHTML = '<i class="fas fa-star"></i>';
+                starBtn.title = 'Remove from starred';
+                showNotification('File added to starred!', 'success');
+            } else {
+                starBtn.classList.remove('bg-yellow-100', 'text-yellow-600', 'hover:bg-yellow-200');
+                starBtn.classList.add('bg-gray-100', 'text-gray-600', 'hover:bg-gray-200');
+                starBtn.innerHTML = '<i class="fas fa-star"></i>';
+                starBtn.title = 'Add to starred';
+                showNotification('File removed from starred', 'info');
+            }
+            
+            // If we're on the starred page and file is unstarred, remove it from view
+            if (window.location.pathname.includes('starred') && !data.is_starred) {
+                const fileElement = element.closest('.file-item');
+                if (fileElement) {
+                    fileElement.style.opacity = '0';
+                    fileElement.style.transform = 'translateX(100px)';
+                    setTimeout(() => fileElement.remove(), 500);
+                }
+            }
+        } else {
+            throw new Error(data.error || 'Failed to update star status');
+        }
+    })
+    .catch(error => {
+        showNotification('Error: ' + error.message, 'error');
+        starBtn.innerHTML = originalHtml;
+    })
+    .finally(() => {
+        starBtn.disabled = false;
+    });
+}
+
+// Update the applyFilters function to handle starred filter
+function applyFilters() {
+    const fileTypeFilter = document.getElementById('fileTypeFilter').value;
+    const dateFilter = document.getElementById('dateFilter').value;
+    
+    const params = new URLSearchParams();
+    
+    if (fileTypeFilter) {
+        params.set('file_type', fileTypeFilter);
+    }
+    
+    if (dateFilter) {
+        params.set('date_filter', dateFilter);
+    }
+    
+    // Handle starred filter from file type dropdown
+    if (fileTypeFilter === 'starred') {
+        params.set('starred', 'true');
+        params.delete('file_type'); // Remove file_type when using starred
+    }
+    
+    // Get current URL without query parameters
+    const currentUrl = window.location.pathname;
+    
+    // Navigate to the filtered URL
+    window.location.href = currentUrl + (params.toString() ? '?' + params.toString() : '');
+}
+
+// Update search to handle starred files
+function searchFiles(searchTerm, fileTypeFilter, dateFilter) {
+    const filesContainer = document.getElementById('searchFilesContainer');
+    const noFilesResults = document.getElementById('noFilesResults');
+    const originalFileItems = document.querySelectorAll('#filesContainer .file-item');
+    
+    let foundFiles = 0;
+    filesContainer.innerHTML = '';
+    
+    originalFileItems.forEach(file => {
+        const fileName = file.querySelector('.file-name').textContent.toLowerCase();
+        const fileType = file.querySelector('.file-type').textContent.toLowerCase();
+        const fileDate = file.querySelector('.file-uploaded').textContent;
+        const isStarred = file.querySelector('button[onclick^="toggleStar"]').classList.contains('bg-yellow-100');
+        
+        // Check if file matches search term
+        const matchesSearch = fileName.includes(searchTerm) || fileType.includes(searchTerm);
+        
+        // Check if file matches current filters
+        const matchesFileType = !fileTypeFilter || fileTypeMatches(fileType, fileTypeFilter);
+        const matchesDate = !dateFilter || dateMatches(fileDate, dateFilter);
+        const matchesStarred = fileTypeFilter !== 'starred' || isStarred;
+        
+        if (matchesSearch && matchesFileType && matchesDate && matchesStarred) {
+            const clone = file.cloneNode(true);
+            const fileNameElement = clone.querySelector('.file-name');
+            const originalName = fileNameElement.textContent;
+            const highlightedName = highlightText(originalName, searchTerm);
+            fileNameElement.innerHTML = highlightedName;
+            
+            filesContainer.appendChild(clone);
+            foundFiles++;
+        }
+    });
+    
+    if (foundFiles === 0) {
+        noFilesResults.classList.remove('hidden');
+    } else {
+        noFilesResults.classList.add('hidden');
+    }
+}
+
+
+// Double-click to preview files
+function initializeDoubleClick() {
+    const fileRows = document.querySelectorAll('.file-item');
+    
+    fileRows.forEach(row => {
+        let clickTimer = null;
+        
+        row.addEventListener('click', function(e) {
+            // Ignore clicks on buttons and links
+            if (e.target.closest('button') || e.target.closest('a')) {
+                return;
+            }
+            
+            if (clickTimer === null) {
+                clickTimer = setTimeout(() => {
+                    clickTimer = null;
+                }, 300); // Single click timeout
+            } else {
+                clearTimeout(clickTimer);
+                clickTimer = null;
+                
+                // Double click detected - open file preview
+                const fileId = this.querySelector('button[onclick^="toggleStar"]')?.getAttribute('onclick')?.match(/'([^']+)'/)?.[1];
+                if (fileId) {
+                    window.location.href = `/file/preview/${fileId}/`;
+                }
+            }
+        });
+        
+        // Add visual feedback for double-click
+        row.style.cursor = 'pointer';
+        row.title = 'Double-click to preview file';
+    });
+}
+
+// Also add double-click to search results
+function initializeSearchDoubleClick() {
+    const searchFileRows = document.querySelectorAll('#searchFilesContainer .file-item');
+    
+    searchFileRows.forEach(row => {
+        let clickTimer = null;
+        
+        row.addEventListener('click', function(e) {
+            if (e.target.closest('button') || e.target.closest('a')) {
+                return;
+            }
+            
+            if (clickTimer === null) {
+                clickTimer = setTimeout(() => {
+                    clickTimer = null;
+                }, 300);
+            } else {
+                clearTimeout(clickTimer);
+                clickTimer = null;
+                
+                const fileId = this.querySelector('button[onclick^="toggleStar"]')?.getAttribute('onclick')?.match(/'([^']+)'/)?.[1];
+                if (fileId) {
+                    window.location.href = `/file/preview/${fileId}/`;
+                }
+            }
+        });
+        
+        row.style.cursor = 'pointer';
+        row.title = 'Double-click to preview file';
+    });
+}
+
+// Initialize double-click when page loads
+document.addEventListener('DOMContentLoaded', function() {
+    initializeDoubleClick();
+});
+
+// Re-initialize when search results are shown
+function searchFiles(searchTerm, fileTypeFilter, dateFilter) {
+    // ... your existing search code ...
+    
+    // After search results are populated, initialize double-click
+    setTimeout(() => {
+        initializeSearchDoubleClick();
+    }, 100);
+}
+
 </script>
 {% endblock %}

@@ -29,7 +29,7 @@ class Command(BaseCommand):
                 'name': 'Basic',
                 'plan_type': 'basic',
                 'max_storage_size': 5 * 1024 * 1024 * 1024,  # 5GB
-                'price': 5,
+                'price': 150,
                 'billing_period': 'monthly',
                 'features': [
                     '5GB Storage',
@@ -44,7 +44,7 @@ class Command(BaseCommand):
                 'name': 'Professional',
                 'plan_type': 'pro',
                 'max_storage_size': 50 * 1024 * 1024 * 1024,  # 50GB
-                'price': 15,
+                'price': 500,
                 'billing_period': 'monthly',
                 'features': [
                     '50GB Storage',
@@ -61,7 +61,7 @@ class Command(BaseCommand):
                 'name': 'Enterprise',
                 'plan_type': 'enterprise',
                 'max_storage_size': 200 * 1024 * 1024 * 1024,  # 200GB
-                'price': 50,
+                'price': 1500,
                 'billing_period': 'monthly',
                 'features': [
                     '200GB Storage',

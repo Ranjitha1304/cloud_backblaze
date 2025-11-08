@@ -139,6 +139,7 @@ class File(models.Model):
     folder = models.ForeignKey(Folder, on_delete=models.CASCADE, null=True, blank=True, related_name='files')
     uploaded_at = models.DateTimeField(auto_now_add=True)
     is_public = models.BooleanField(default=False)
+    is_starred = models.BooleanField(default=False)
     
     def save(self, *args, **kwargs):
         if not self.name:

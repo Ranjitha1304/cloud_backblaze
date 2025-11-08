@@ -77,8 +77,12 @@ WSGI_APPLICATION = 'cloud_storage.wsgi.application'
 
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+        'ENGINE': 'django.db.backends.mysql',
+        'NAME': 'cloud_db',
+        'USER': 'root',
+        'PASSWORD': '1994',
+        'HOST': 'localhost',
+        'PORT': '3306',
     }
 }
 
@@ -170,3 +174,26 @@ STRIPE_SECRET_KEY = '******REMOVED******_51RbOIoR2vlff5nNPqyouXpWPqkNcfK5POTuHpm
 
 # Plan Configuration
 DEFAULT_PLAN = 'free'  # Default plan for new users
+
+
+# Email Configuration
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+EMAIL_HOST = 'smtp.gmail.com'  # or your SMTP server
+EMAIL_PORT = 587
+EMAIL_USE_TLS = True
+EMAIL_HOST_USER = 'ranjitha13cs@gmail.com'  
+EMAIL_HOST_PASSWORD = 'iixy zrjl wzbc vqtk'  
+DEFAULT_FROM_EMAIL = 'ranjitha13cs@gmail.com'  
+
+# Email templates configuration
+EMAIL_TEMPLATES = {
+    'WELCOME': {
+        'subject': 'Welcome to Cloud Storage - Your Account is Ready!',
+    },
+    'SUBSCRIPTION_UPGRADE': {
+        'subject': 'Subscription Upgrade Confirmation',
+    },
+    'SUBSCRIPTION_DOWNGRADE': {
+        'subject': 'Subscription Change Notification',
+    }
+}

@@ -29,7 +29,7 @@
                             </p>
                             <p class="flex justify-between">
                                 <span class="text-gray-600">Price:</span>
-                                <span class="font-semibold">${{ subscription.plan.price }}/month</span>
+                                <span class="font-semibold">Rs.{{ subscription.plan.price }}/month</span>
                             </p>
                             <p class="flex justify-between">
                                 <span class="text-gray-600">Status:</span>
@@ -97,7 +97,7 @@
                     </div>
                     <div class="flex justify-between items-center">
                         <span class="text-gray-600">Amount due:</span>
-                        <span class="font-semibold">${{ upcoming_invoice.amount_due|div:100 }}</span>
+                        <span class="font-semibold">Rs.{{ upcoming_invoice.amount_due|div:100 }}</span>
                     </div>
                 </div>
             </div>

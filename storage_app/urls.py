@@ -39,4 +39,17 @@ urlpatterns = [
 
     path('debug-plans/', views.debug_plans, name='debug_plans'),
 
+    path('test-subscription-email/', views.test_subscription_email, name='test_subscription_email'),
+
+    path('debug-payment/', views.debug_payment_flow, name='debug_payment_flow'),
+
+    # Starred files URLs
+    path('file/star/<uuid:file_id>/', views.toggle_star_file, name='toggle_star_file'),
+    path('files/starred/', views.starred_files, name='starred_files'),
+
+    path('file/preview/<uuid:file_id>/', views.preview_file, name='preview_file'),
+
+    path('dashboard/toggle-view/', views.toggle_dashboard_view, name='toggle_dashboard_view'),
+    
+
 ]
