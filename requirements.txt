@@ -7,3 +7,4 @@ stripe
 mysqlclient
 dj-database-url
 python-dotenv
+whitenoise
