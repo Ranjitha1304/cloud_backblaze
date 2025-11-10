@@ -50,6 +50,24 @@ urlpatterns = [
     path('file/preview/<uuid:file_id>/', views.preview_file, name='preview_file'),
 
     path('dashboard/toggle-view/', views.toggle_dashboard_view, name='toggle_dashboard_view'),
+
+    path('trash/', views.trash_view, name='trash_view'),
+    path('file/move-to-trash/<uuid:file_id>/', views.move_to_trash, name='move_to_trash'),
+    path('file/restore/<uuid:file_id>/', views.restore_file, name='restore_file'),
+    path('file/restore-all/', views.restore_all_files, name='restore_all_files'),
+    path('file/permanent-delete/<uuid:file_id>/', views.permanent_delete_file, name='permanent_delete_file'),
+    path('file/empty-trash/', views.empty_trash, name='empty_trash'),
     
+
+    # Task URLs
+    path('tasks/', views.task_list, name='task_list'),
+    path('tasks/create/', views.create_task, name='create_task'),
+    path('tasks/<uuid:task_id>/edit/', views.edit_task, name='edit_task'),
+    path('tasks/<uuid:task_id>/toggle/', views.toggle_task_status, name='toggle_task_status'),
+    path('tasks/<uuid:task_id>/delete/', views.delete_task, name='delete_task'),
+    path('tasks/<uuid:task_id>/', views.task_detail, name='task_detail'),
+    path('tasks/<uuid:task_id>/update-status/', views.update_task_status, name='update_task_status'),
+
+    path('tasks/<uuid:task_id>/json/', views.task_detail_json, name='task_detail_json'),
 
 ]

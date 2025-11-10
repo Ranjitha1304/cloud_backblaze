@@ -105,27 +105,35 @@
                         Vetri CloudStorage
                     </span>
                 </div>
-                <div class="flex items-center space-x-6">
-                    <span class="text-blue-500">Welcome, {{ user.username }}</span>
-                    <a href="{% url 'dashboard' %}" class="text-blue-800 hover:text-black transition-colors duration-200 flex items-center space-x-1">
-                        <i class="fas fa-tachometer-alt"></i>
-                        <span>Dashboard</span>
-                    </a>
-                    <a href="{% url 'file_list' %}" class="text-blue-800 hover:text-black transition-colors duration-200 flex items-center space-x-1">
-                        <i class="fas fa-folder"></i>
-                        <span>Files</span>
-                    </a>
-                    <a href="{% url 'starred_files' %}" class="text-blue-800 hover:text-black transition-colors duration-200 flex items-center space-x-1">
-    <i class="fas fa-star"></i>
-    <span>Starred</span>
-</a>
-
-                    <a href="{% url 'logout' %}" class="text-blue-800 hover:text-black transition-colors duration-200 flex items-center space-x-1">
-                        <i class="fas fa-sign-out-alt"></i>
-                        <span>Logout</span>
-                    </a>
-                </div>
-            </div>
+<!--  navigation section  -->
+<div class="flex items-center space-x-6">
+    <span class="text-blue-500">Welcome, {{ user.username }}</span>
+    <a href="{% url 'dashboard' %}" class="text-blue-800 hover:text-black transition-colors duration-200 flex items-center space-x-1">
+        <i class="fas fa-tachometer-alt"></i>
+        <span>Dashboard</span>
+    </a>
+    <a href="{% url 'file_list' %}" class="text-blue-800 hover:text-black transition-colors duration-200 flex items-center space-x-1">
+        <i class="fas fa-folder"></i>
+        <span>Files</span>
+    </a>
+    <!-- Add Tasks Link -->
+    <a href="{% url 'task_list' %}" class="text-blue-800 hover:text-black transition-colors duration-200 flex items-center space-x-1">
+        <i class="fas fa-tasks"></i>
+        <span>Tasks</span>
+    </a>
+    <a href="{% url 'starred_files' %}" class="text-blue-800 hover:text-black transition-colors duration-200 flex items-center space-x-1">
+        <i class="fas fa-star"></i>
+        <span>Starred</span>
+    </a>
+    <a href="{% url 'trash_view' %}" class="text-blue-800 hover:text-black transition-colors duration-200 flex items-center space-x-1">
+        <i class="fas fa-trash"></i>
+        <span>Trash</span>
+    </a>
+    <a href="{% url 'logout' %}" class="text-blue-800 hover:text-black transition-colors duration-200 flex items-center space-x-1">
+        <i class="fas fa-sign-out-alt"></i>
+        <span>Logout</span>
+    </a>
+</div>            </div>
         </div>
     </nav>
     {% endif %}

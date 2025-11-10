@@ -4,6 +4,8 @@ import os
 import uuid
 from django.conf import settings
 
+from django.utils import timezone
+
 # Import the custom storage
 try:
     from .storage_backends import BackblazeB2Storage
@@ -126,6 +128,22 @@ class Folder(models.Model):
         """Count subfolders"""
         return self.subfolders.count()
 
+
+class Trash(models.Model):
+    """Model to track files in trash"""
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    file = models.ForeignKey('File', on_delete=models.CASCADE)
+    original_folder = models.ForeignKey('Folder', on_delete=models.SET_NULL, null=True, blank=True)
+    deleted_at = models.DateTimeField(auto_now_add=True)
+    scheduled_permanent_deletion = models.DateTimeField(null=True, blank=True)
+    
+    class Meta:
+        ordering = ['-deleted_at']
+    
+    def __str__(self):
+        return f"Trash item: {self.file.name}"
+    
+
 class File(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     name = models.CharField(max_length=255)
@@ -140,6 +158,7 @@ class File(models.Model):
     uploaded_at = models.DateTimeField(auto_now_add=True)
     is_public = models.BooleanField(default=False)
     is_starred = models.BooleanField(default=False)
+    is_deleted = models.BooleanField(default=False)
     
     def save(self, *args, **kwargs):
         if not self.name:
@@ -147,6 +166,16 @@ class File(models.Model):
         if not self.file_type:
             self.file_type = os.path.splitext(self.file.name)[1].lower()
         super().save(*args, **kwargs)
+
+    def soft_delete(self):
+        """Soft delete - move to trash"""
+        self.is_deleted = True
+        self.save()
+    
+    def restore(self):
+        """Restore from trash"""
+        self.is_deleted = False
+        self.save()    
     
     def __str__(self):
         return self.name
@@ -160,3 +189,64 @@ class ShareLink(models.Model):
     
     def __str__(self):
         return f"Share link for {self.file.name}"
+    
+
+class Task(models.Model):
+    PRIORITY_CHOICES = [
+        ('low', 'Low'),
+        ('medium', 'Medium'),
+        ('high', 'High'),
+    ]
+    
+    STATUS_CHOICES = [
+        ('pending', 'Pending'),
+        ('in_progress', 'In Progress'),
+        ('completed', 'Completed'),
+    ]
+    
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    title = models.CharField(max_length=255)
+    description = models.TextField(blank=True, null=True)
+    owner = models.ForeignKey(User, on_delete=models.CASCADE)
+    priority = models.CharField(max_length=20, choices=PRIORITY_CHOICES, default='medium')
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
+    due_date = models.DateField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    completed_at = models.DateTimeField(null=True, blank=True)
+    
+    class Meta:
+        ordering = ['-created_at']
+    
+    def __str__(self):
+        return self.title
+    
+    def save(self, *args, **kwargs):
+        # Set completed_at when status changes to completed
+        if self.status == 'completed' and not self.completed_at:
+            self.completed_at = timezone.now()
+        elif self.status != 'completed':
+            self.completed_at = None
+        super().save(*args, **kwargs)
+    
+    
+    def is_overdue(self):
+        if self.due_date and self.status != 'completed':
+            return timezone.now().date() > self.due_date
+        return False
+    
+    def get_priority_class(self):
+        priority_classes = {
+            'low': 'bg-green-100 text-green-800',
+            'medium': 'bg-yellow-100 text-yellow-800',
+            'high': 'bg-red-100 text-red-800',
+        }
+        return priority_classes.get(self.priority, 'bg-gray-100 text-gray-800')
+    
+    def get_status_class(self):
+        status_classes = {
+            'pending': 'bg-gray-100 text-gray-800',
+            'in_progress': 'bg-blue-100 text-blue-800',
+            'completed': 'bg-green-100 text-green-800',
+        }
+        return status_classes.get(self.status, 'bg-gray-100 text-gray-800')    

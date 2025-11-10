@@ -197,3 +197,109 @@ input:focus, button:focus, select:focus {
     0% { transform: rotate(0deg); }
     100% { transform: rotate(360deg); }
 }
+
+
+/* Add these styles to your existing style.css */
+
+/* Task-specific styles */
+.task-item {
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.task-item:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+}
+
+.task-checkbox {
+    transition: all 0.3s ease;
+}
+
+.task-checkbox:hover {
+    transform: scale(1.1);
+}
+
+.task-priority-low {
+    border-left: 4px solid #10b981;
+}
+
+.task-priority-medium {
+    border-left: 4px solid #f59e0b;
+}
+
+.task-priority-high {
+    border-left: 4px solid #ef4444;
+}
+
+.task-status-pending {
+    background: linear-gradient(135deg, #f3f4f6, #e5e7eb);
+}
+
+.task-status-in_progress {
+    background: linear-gradient(135deg, #dbeafe, #93c5fd);
+}
+
+.task-status-completed {
+    background: linear-gradient(135deg, #dcfce7, #86efac);
+}
+
+/* Task modal animations */
+.task-modal-enter {
+    animation: taskModalEnter 0.3s ease-out;
+}
+
+@keyframes taskModalEnter {
+    from {
+        opacity: 0;
+        transform: scale(0.9) translateY(-20px);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1) translateY(0);
+    }
+}
+
+/* Task filter styles */
+.task-filter-active {
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    color: white;
+}
+
+/* Task completion animation */
+.task-completed {
+    animation: taskComplete 0.5s ease-out;
+}
+
+@keyframes taskComplete {
+    0% {
+        transform: scale(1);
+    }
+    50% {
+        transform: scale(1.05);
+    }
+    100% {
+        transform: scale(1);
+    }
+}
+
+/* Responsive task grid */
+@media (max-width: 768px) {
+    .task-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .task-actions {
+        opacity: 1 !important;
+    }
+}
+
+/* Task drag and drop */
+.task-dragging {
+    opacity: 0.5;
+    transform: rotate(5deg);
+}
+
+.task-drop-zone {
+    border: 2px dashed #3b82f6;
+    background-color: rgba(59, 130, 246, 0.1);
+}

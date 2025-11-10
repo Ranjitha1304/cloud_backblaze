@@ -373,12 +373,12 @@
                                         </button>
                                         
                                         <!-- Delete Button -->
-                                        <button onclick="deleteFile('{{ file.id }}')" 
-                                                class="w-10 h-10 bg-red-100 rounded-xl flex items-center justify-center text-red-600 hover:bg-red-200 transition-all duration-200 transform hover:scale-110 group"
-                                                title="Delete">
-                                            <i class="fas fa-trash group-hover:animate-pulse"></i>
-                                        </button>
-                                    </div>
+<!-- Replace the delete button with this trash button -->
+<button onclick="moveToTrash('{{ file.id }}')" 
+        class="w-10 h-10 bg-red-100 rounded-xl flex items-center justify-center text-red-600 hover:bg-red-200 transition-all duration-200 transform hover:scale-110 group"
+        title="Move to Trash">
+    <i class="fas fa-trash group-hover:animate-pulse"></i>
+</button>                                    </div>
                                 </td>
                             </tr>
                             {% endfor %}
@@ -1487,6 +1487,43 @@ function searchFiles(searchTerm, fileTypeFilter, dateFilter) {
     setTimeout(() => {
         initializeSearchDoubleClick();
     }, 100);
+}
+
+// Move to trash function
+function moveToTrash(fileId) {
+    if (confirm('Move this file to trash? You can restore it later from the trash.')) {
+        const button = event.target.closest('button');
+        const originalHtml = button.innerHTML;
+        
+        button.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+        button.disabled = true;
+        
+        fetch(`/file/move-to-trash/${fileId}/`, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': '{{ csrf_token }}',
+                'Content-Type': 'application/json',
+            },
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                showNotification(data.message, 'success');
+                // Remove the file row with animation
+                const fileRow = button.closest('.file-item');
+                fileRow.style.opacity = '0';
+                fileRow.style.transform = 'translateX(100px)';
+                setTimeout(() => fileRow.remove(), 500);
+            } else {
+                throw new Error(data.error);
+            }
+        })
+        .catch(error => {
+            showNotification('Error: ' + error.message, 'error');
+            button.innerHTML = originalHtml;
+            button.disabled = false;
+        });
+    }
 }
 
 </script>

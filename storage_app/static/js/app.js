@@ -270,3 +270,227 @@ function getCSRFToken() {
 window.enhancedDeleteFile = enhancedDeleteFile;
 window.showNotification = showNotification;
 window.formatFileSize = formatFileSize;
+
+
+// Task Management Functions
+function initializeTaskManagement() {
+    // Add task-specific event listeners and initialization
+    initializeTaskModals();
+    initializeTaskFilters();
+}
+
+function initializeTaskModals() {
+    // Close modals on outside click
+    document.addEventListener('click', function(e) {
+        if (e.target.id === 'createTaskModal') {
+            closeCreateTaskModal();
+        }
+        if (e.target.id === 'editTaskModal') {
+            closeEditTaskModal();
+        }
+    });
+
+    // Escape key to close modals
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') {
+            closeCreateTaskModal();
+            closeEditTaskModal();
+        }
+    });
+}
+
+function initializeTaskFilters() {
+    // Initialize any task-specific filter functionality
+    console.log('Task filters initialized');
+}
+
+// Task API Functions
+async function createTask(formData) {
+    try {
+        const response = await fetch('/tasks/create/', {
+            method: 'POST',
+            body: formData,
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest',
+            }
+        });
+        return await response.json();
+    } catch (error) {
+        console.error('Error creating task:', error);
+        return { success: false, error: 'Network error' };
+    }
+}
+
+async function updateTask(taskId, formData) {
+    try {
+        const response = await fetch(`/tasks/${taskId}/edit/`, {
+            method: 'POST',
+            body: formData,
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest',
+            }
+        });
+        return await response.json();
+    } catch (error) {
+        console.error('Error updating task:', error);
+        return { success: false, error: 'Network error' };
+    }
+}
+
+async function toggleTaskStatus(taskId) {
+    try {
+        const response = await fetch(`/tasks/${taskId}/toggle/`, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': getCSRFToken(),
+                'Content-Type': 'application/json',
+            },
+        });
+        return await response.json();
+    } catch (error) {
+        console.error('Error toggling task status:', error);
+        return { success: false, error: 'Network error' };
+    }
+}
+
+async function deleteTask(taskId) {
+    try {
+        const response = await fetch(`/tasks/${taskId}/delete/`, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': getCSRFToken(),
+                'Content-Type': 'application/json',
+            },
+        });
+        return await response.json();
+    } catch (error) {
+        console.error('Error deleting task:', error);
+        return { success: false, error: 'Network error' };
+    }
+}
+
+// Enhanced task functions with better UX
+function enhancedCreateTask(formElement) {
+    const submitBtn = formElement.querySelector('button[type="submit"]');
+    const originalText = submitBtn.innerHTML;
+    
+    // Show loading state
+    submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Creating...';
+    submitBtn.disabled = true;
+    
+    const formData = new FormData(formElement);
+    
+    createTask(formData)
+        .then(data => {
+            if (data.success) {
+                showNotification('Task created successfully', 'success');
+                closeCreateTaskModal();
+                setTimeout(() => location.reload(), 1000);
+            } else {
+                showNotification('Error creating task: ' + data.error, 'error');
+            }
+        })
+        .finally(() => {
+            submitBtn.innerHTML = originalText;
+            submitBtn.disabled = false;
+        });
+}
+
+function enhancedUpdateTask(taskId, formElement) {
+    const submitBtn = formElement.querySelector('button[type="submit"]');
+    const originalText = submitBtn.innerHTML;
+    
+    // Show loading state
+    submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Updating...';
+    submitBtn.disabled = true;
+    
+    const formData = new FormData(formElement);
+    
+    updateTask(taskId, formData)
+        .then(data => {
+            if (data.success) {
+                showNotification('Task updated successfully', 'success');
+                closeEditTaskModal();
+                setTimeout(() => location.reload(), 1000);
+            } else {
+                showNotification('Error updating task: ' + data.error, 'error');
+            }
+        })
+        .finally(() => {
+            submitBtn.innerHTML = originalText;
+            submitBtn.disabled = false;
+        });
+}
+
+function enhancedToggleTaskStatus(taskId, element) {
+    const originalHtml = element.innerHTML;
+    element.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+    element.disabled = true;
+    
+    toggleTaskStatus(taskId)
+        .then(data => {
+            if (data.success) {
+                showNotification(`Task marked as ${data.status_display}`, 'success');
+                // Animate the change
+                const taskItem = element.closest('.task-item');
+                if (taskItem) {
+                    taskItem.style.opacity = '0.7';
+                    setTimeout(() => {
+                        location.reload();
+                    }, 500);
+                } else {
+                    setTimeout(() => location.reload(), 500);
+                }
+            } else {
+                throw new Error(data.error || 'Failed to update task status');
+            }
+        })
+        .catch(error => {
+            showNotification('Error updating task status: ' + error.message, 'error');
+            element.innerHTML = originalHtml;
+            element.disabled = false;
+        });
+}
+
+function enhancedDeleteTask(taskId, element) {
+    if (confirm('Are you sure you want to delete this task? This action cannot be undone.')) {
+        const originalHtml = element.innerHTML;
+        element.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+        element.disabled = true;
+        
+        deleteTask(taskId)
+            .then(data => {
+                if (data.success) {
+                    showNotification('Task deleted successfully', 'success');
+                    // Animate removal
+                    const taskElement = element.closest('.task-item');
+                    if (taskElement) {
+                        taskElement.style.opacity = '0';
+                        taskElement.style.transform = 'translateX(100px)';
+                        setTimeout(() => taskElement.remove(), 500);
+                    } else {
+                        setTimeout(() => location.reload(), 1000);
+                    }
+                } else {
+                    throw new Error(data.error || 'Failed to delete task');
+                }
+            })
+            .catch(error => {
+                showNotification('Error deleting task: ' + error.message, 'error');
+                element.innerHTML = originalHtml;
+                element.disabled = false;
+            });
+    }
+}
+
+// Export task functions for global use
+window.enhancedCreateTask = enhancedCreateTask;
+window.enhancedUpdateTask = enhancedUpdateTask;
+window.enhancedToggleTaskStatus = enhancedToggleTaskStatus;
+window.enhancedDeleteTask = enhancedDeleteTask;
+window.initializeTaskManagement = initializeTaskManagement;
+
+// Initialize task management when DOM is loaded
+document.addEventListener('DOMContentLoaded', function() {
+    initializeTaskManagement();
+});

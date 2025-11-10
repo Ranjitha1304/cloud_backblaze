@@ -5,7 +5,7 @@ from django.http import JsonResponse, HttpResponse, Http404
 from django.db.models import Sum, Q 
 from django.utils import timezone
 import os
-from .models import File, UserProfile, ShareLink, StoragePlan, Folder, Subscription
+from .models import File, UserProfile, ShareLink, StoragePlan, Folder, Subscription, Trash
 from .forms import CustomUserCreationForm, FileUploadForm, FileShareForm, FolderCreateForm, MoveFileForm
 
 from django.urls import reverse  
@@ -18,6 +18,10 @@ from .utils import send_welcome_email, send_subscription_email, send_payment_suc
 
 from django.db import models
 
+from .models import Task
+from .forms import TaskCreateForm, TaskEditForm
+
+from django.utils import timezone
 
 def register_view(request):
     if request.method == 'POST':
@@ -78,7 +82,7 @@ def dashboard(request):
             used_storage=0
         )
     
-    files = File.objects.filter(owner=request.user).order_by('-uploaded_at')
+    files = File.objects.filter(owner=request.user, is_deleted=False).order_by('-uploaded_at')
     total_files = files.count()
     
     # Calculate storage usage
@@ -136,12 +140,32 @@ def upload_file(request):
 
 @login_required
 def delete_file(request, file_id):
+    """Move file to trash instead of permanent deletion"""
     if request.method == 'POST':
-        file = get_object_or_404(File, id=file_id, owner=request.user)
-        # For cloud storage, we don't need to delete local file
-        file.delete()
-        return JsonResponse({'success': True})
-    return JsonResponse({'success': False})
+        try:
+            file_obj = get_object_or_404(File, id=file_id, owner=request.user)
+            
+            # Create trash record
+            Trash.objects.create(
+                user=request.user,
+                file=file_obj,
+                original_folder=file_obj.folder,
+                scheduled_permanent_deletion=timezone.now() + timezone.timedelta(days=30)
+            )
+            
+            # Mark file as deleted
+            file_obj.is_deleted = True
+            file_obj.save()
+            
+            return JsonResponse({
+                'success': True,
+                'message': 'File moved to trash'
+            })
+            
+        except Exception as e:
+            return JsonResponse({'success': False, 'error': str(e)})
+    return JsonResponse({'success': False, 'error': 'Invalid request'})
+
 
 @login_required
 def download_file(request, file_id):
@@ -304,7 +328,7 @@ def file_list(request, folder_id=None):
         current_folder = get_object_or_404(Folder, id=folder_id, owner=request.user)
     
     # Get base queryset
-    files = File.objects.filter(owner=request.user, folder=current_folder)
+    files = File.objects.filter(owner=request.user, folder=current_folder, is_deleted=False)
     
     # Apply file type filter
     file_type_filter = request.GET.get('file_type', '')
@@ -1159,7 +1183,7 @@ def toggle_star_file(request, file_id):
 @login_required
 def starred_files(request):
     """View to show only starred files"""
-    files = File.objects.filter(owner=request.user, is_starred=True).order_by('-uploaded_at')
+    files = File.objects.filter(owner=request.user, is_starred=True, is_deleted=False).order_by('-uploaded_at')
     folders = Folder.objects.filter(owner=request.user, parent_folder=None).order_by('name')
     
     # Get filter counts for UI
@@ -1251,3 +1275,341 @@ def preview_file(request, file_id):
         
     except Exception as e:
         return JsonResponse({'success': False, 'error': str(e)})
+    
+
+@login_required
+def trash_view(request):
+    """View to show all files in trash"""
+    trash_items = Trash.objects.filter(user=request.user).select_related('file')
+    files_in_trash = [item.file for item in trash_items]
+    
+    context = {
+        'files': files_in_trash,
+        'trash_count': len(files_in_trash),
+        'is_trash_view': True,
+    }
+    return render(request, 'trash.html', context)
+
+@login_required
+def move_to_trash(request, file_id):
+    """Move file to trash instead of permanent deletion"""
+    if request.method == 'POST':
+        try:
+            file_obj = get_object_or_404(File, id=file_id, owner=request.user)
+            
+            # Create trash record
+            Trash.objects.create(
+                user=request.user,
+                file=file_obj,
+                original_folder=file_obj.folder,
+                scheduled_permanent_deletion=timezone.now() + timezone.timedelta(days=30)  # 30 days retention
+            )
+            
+            # Mark file as deleted
+            file_obj.is_deleted = True
+            file_obj.save()
+            
+            return JsonResponse({
+                'success': True,
+                'message': 'File moved to trash'
+            })
+            
+        except Exception as e:
+            return JsonResponse({'success': False, 'error': str(e)})
+    
+    return JsonResponse({'success': False, 'error': 'Invalid request method'})
+
+@login_required
+def restore_file(request, file_id):
+    """Restore file from trash"""
+    if request.method == 'POST':
+        try:
+            file_obj = get_object_or_404(File, id=file_id, owner=request.user, is_deleted=True)
+            trash_item = get_object_or_404(Trash, file=file_obj, user=request.user)
+            
+            # Restore file
+            file_obj.is_deleted = False
+            file_obj.save()
+            
+            # Remove from trash
+            trash_item.delete()
+            
+            return JsonResponse({
+                'success': True,
+                'message': 'File restored successfully'
+            })
+            
+        except Exception as e:
+            return JsonResponse({'success': False, 'error': str(e)})
+    
+    return JsonResponse({'success': False, 'error': 'Invalid request method'})
+
+@login_required
+def restore_all_files(request):
+    """Restore all files from trash"""
+    if request.method == 'POST':
+        try:
+            trash_items = Trash.objects.filter(user=request.user)
+            restored_count = 0
+            
+            for trash_item in trash_items:
+                file_obj = trash_item.file
+                file_obj.is_deleted = False
+                file_obj.save()
+                trash_item.delete()
+                restored_count += 1
+            
+            return JsonResponse({
+                'success': True,
+                'message': f'Successfully restored {restored_count} files',
+                'restored_count': restored_count
+            })
+            
+        except Exception as e:
+            return JsonResponse({'success': False, 'error': str(e)})
+    
+    return JsonResponse({'success': False, 'error': 'Invalid request method'})
+
+@login_required
+def permanent_delete_file(request, file_id):
+    """Permanently delete file from trash"""
+    if request.method == 'POST':
+        try:
+            file_obj = get_object_or_404(File, id=file_id, owner=request.user, is_deleted=True)
+            trash_item = get_object_or_404(Trash, file=file_obj, user=request.user)
+            
+            # Delete the actual file from storage
+            file_obj.file.delete(save=False)
+            
+            # Delete the database records
+            trash_item.delete()
+            file_obj.delete()
+            
+            return JsonResponse({
+                'success': True,
+                'message': 'File permanently deleted'
+            })
+            
+        except Exception as e:
+            return JsonResponse({'success': False, 'error': str(e)})
+    
+    return JsonResponse({'success': False, 'error': 'Invalid request method'})
+
+@login_required
+def empty_trash(request):
+    """Permanently delete all files in trash"""
+    if request.method == 'POST':
+        try:
+            trash_items = Trash.objects.filter(user=request.user)
+            deleted_count = 0
+            
+            for trash_item in trash_items:
+                file_obj = trash_item.file
+                
+                # Delete the actual file from storage
+                file_obj.file.delete(save=False)
+                
+                # Delete the database records
+                trash_item.delete()
+                file_obj.delete()
+                deleted_count += 1
+            
+            return JsonResponse({
+                'success': True,
+                'message': f'Successfully deleted {deleted_count} files',
+                'deleted_count': deleted_count
+            })
+            
+        except Exception as e:
+            return JsonResponse({'success': False, 'error': str(e)})
+    
+    return JsonResponse({'success': False, 'error': 'Invalid request method'})    
+
+
+# TASK MANAGEMENT VIEWS
+
+@login_required
+def task_list(request):
+    """View to display all tasks for the user"""
+    tasks = Task.objects.filter(owner=request.user).order_by('-created_at')
+    
+    # Filter by status if provided
+    status_filter = request.GET.get('status', '')
+    if status_filter:
+        tasks = tasks.filter(status=status_filter)
+    
+    # Filter by priority if provided
+    priority_filter = request.GET.get('priority', '')
+    if priority_filter:
+        tasks = tasks.filter(priority=priority_filter)
+    
+    context = {
+        'tasks': tasks,
+        'status_filter': status_filter,
+        'priority_filter': priority_filter,
+        'total_tasks': Task.objects.filter(owner=request.user).count(),
+        'pending_tasks': Task.objects.filter(owner=request.user, status='pending').count(),
+        'completed_tasks': Task.objects.filter(owner=request.user, status='completed').count(),
+        'today': timezone.now().date(),  
+    }
+    return render(request, 'tasks/task_list.html', context)
+
+@login_required
+def create_task(request):
+    """Create a new task"""
+    if request.method == 'POST':
+        form = TaskCreateForm(request.POST)
+        if form.is_valid():
+            task = form.save(commit=False)
+            task.owner = request.user
+            task.save()
+            
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                return JsonResponse({
+                    'success': True,
+                    'message': 'Task created successfully',
+                    'task_id': str(task.id)
+                })
+            return redirect('task_list')
+        else:
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                return JsonResponse({
+                    'success': False,
+                    'error': form.errors
+                })
+    else:
+        form = TaskCreateForm()
+    
+    return render(request, 'tasks/create_task.html', {'form': form})
+
+@login_required
+def edit_task(request, task_id):
+    """Edit an existing task"""
+    task = get_object_or_404(Task, id=task_id, owner=request.user)
+    
+    if request.method == 'POST':
+        form = TaskEditForm(request.POST, instance=task)
+        if form.is_valid():
+            form.save()
+            
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                return JsonResponse({
+                    'success': True,
+                    'message': 'Task updated successfully'
+                })
+            return redirect('task_list')
+        else:
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                return JsonResponse({
+                    'success': False,
+                    'error': form.errors
+                })
+    else:
+        form = TaskEditForm(instance=task)
+    
+    return render(request, 'tasks/edit_task.html', {'form': form, 'task': task})
+
+@login_required
+def toggle_task_status(request, task_id):
+    """Toggle task status between pending and completed"""
+    if request.method == 'POST':
+        try:
+            task = get_object_or_404(Task, id=task_id, owner=request.user)
+            
+            if task.status == 'completed':
+                task.status = 'pending'
+                task.completed_at = None
+            else:
+                task.status = 'completed'
+                task.completed_at = timezone.now()
+            
+            task.save()
+            
+            return JsonResponse({
+                'success': True,
+                'status': task.status,
+                'status_display': task.get_status_display(),
+                'completed_at': task.completed_at.isoformat() if task.completed_at else None
+            })
+            
+        except Exception as e:
+            return JsonResponse({'success': False, 'error': str(e)})
+    
+    return JsonResponse({'success': False, 'error': 'Invalid request method'})
+
+@login_required
+def delete_task(request, task_id):
+    """Delete a task"""
+    if request.method == 'POST':
+        try:
+            task = get_object_or_404(Task, id=task_id, owner=request.user)
+            task.delete()
+            
+            return JsonResponse({
+                'success': True,
+                'message': 'Task deleted successfully'
+            })
+            
+        except Exception as e:
+            return JsonResponse({'success': False, 'error': str(e)})
+    
+    return JsonResponse({'success': False, 'error': 'Invalid request method'})
+
+@login_required
+def task_detail(request, task_id):
+    """View task details"""
+    task = get_object_or_404(Task, id=task_id, owner=request.user)
+    return render(request, 'tasks/task_detail.html', {'task': task})
+
+@login_required
+def update_task_status(request, task_id):
+    """Update task status to a specific value"""
+    if request.method == 'POST':
+        try:
+            task = get_object_or_404(Task, id=task_id, owner=request.user)
+            new_status = request.POST.get('status')
+            
+            if new_status in dict(Task.STATUS_CHOICES):
+                task.status = new_status
+                if new_status == 'completed':
+                    task.completed_at = timezone.now()
+                else:
+                    task.completed_at = None
+                
+                task.save()
+                
+                return JsonResponse({
+                    'success': True,
+                    'status': task.status,
+                    'status_display': task.get_status_display(),
+                    'completed_at': task.completed_at.isoformat() if task.completed_at else None
+                })
+            else:
+                return JsonResponse({'success': False, 'error': 'Invalid status'})
+                
+        except Exception as e:
+            return JsonResponse({'success': False, 'error': str(e)})
+    
+    return JsonResponse({'success': False, 'error': 'Invalid request method'})
+
+
+@login_required
+def task_detail_json(request, task_id):
+    """Return task details as JSON for AJAX requests"""
+    try:
+        task = get_object_or_404(Task, id=task_id, owner=request.user)
+        task_data = {
+            'id': str(task.id),
+            'title': task.title,
+            'description': task.description,
+            'priority': task.priority,
+            'status': task.status,
+            'due_date': task.due_date.isoformat() if task.due_date else None,
+            'created_at': task.created_at.isoformat(),
+            'updated_at': task.updated_at.isoformat(),
+            'completed_at': task.completed_at.isoformat() if task.completed_at else None,
+            'is_overdue': task.is_overdue(),
+        }
+        return JsonResponse(task_data)
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
