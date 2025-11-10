@@ -89,7 +89,7 @@ if os.environ.get("RENDER") or os.environ.get("PYTHONANYWHERE_DOMAIN"):
     DATABASES = {
         "default": {
             "ENGINE": "django.db.backends.sqlite3",
-            "NAME": BASE_DIR / "deploy_db.sqlite3",
+            "NAME": os.path.join(BASE_DIR, "db.sqlite3"),   # not deploy_db.sqlite3
         }
     }
 
