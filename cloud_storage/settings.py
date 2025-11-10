@@ -9,6 +9,9 @@ https://docs.djangoproject.com/en/5.2/topics/settings/
 For the full list of settings and their values, see
 https://docs.djangoproject.com/en/5.2/ref/settings/
 """
+from dotenv import load_dotenv
+import os
+load_dotenv()
 
 from pathlib import Path
 
@@ -20,7 +23,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-zk4p5=oe4!y!a10(2pmld1)c^q#t6=+ex3dkd0+5p-@_2gkn@s'
+SECRET_KEY = os.getenv("SECRET_KEY")
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
@@ -165,10 +168,10 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 
 # Backblaze B2 Configuration
-AWS_ACCESS_KEY_ID = '0052e2d9a127cc30000000001'  # From B2 dashboard your-key-id
-AWS_SECRET_ACCESS_KEY = 'K005FRPgqjGUl0Vm2xlavXjFkdrEFdE'  # From B2 dashboard your-application-key
-AWS_STORAGE_BUCKET_NAME = 'cloud-project-vts'  #your-bucket-name
-AWS_S3_ENDPOINT_URL = 'https://s3.us-east-005.backblazeb2.com'  # Your region endpoint
+AWS_ACCESS_KEY_ID = os.getenv("AWS_ACCESS_KEY_ID")  # From B2 dashboard your-key-id
+AWS_SECRET_ACCESS_KEY = os.getenv("AWS_SECRET_ACCESS_KEY")  # From B2 dashboard your-application-key
+AWS_STORAGE_BUCKET_NAME = os.getenv("AWS_STORAGE_BUCKET_NAME")  #your-bucket-name
+AWS_S3_ENDPOINT_URL = os.getenv("AWS_S3_ENDPOINT_URL")  # Your region endpoint
 
 # Django Storages settings
 DEFAULT_FILE_STORAGE = 'storage_app.storage_backends.BackblazeB2Storage'
@@ -184,8 +187,8 @@ DATA_UPLAOD_MAX_MEMORY_SIZE = 100 * 1024 * 1024  # 100MB
 
 
 # Stripe Configuration
-STRIPE_PUBLISHABLE_KEY = 'pk_test_51RbOIoR2vlff5nNPNWBXrZWN1vpsZLxrxXRG0MqWANgDycBziueiuDz58csCXEnje39rSsFzzXvc6QaDX2DWmzcb00nONGofBE'
-STRIPE_SECRET_KEY = '******REMOVED******_51RbOIoR2vlff5nNPqyouXpWPqkNcfK5POTuHpmheWc1tMZ9NDY5aY9PjSwWJJM7tinsrOdiL0LttRwnQJVFQaytM002a5uU540'
+STRIPE_PUBLISHABLE_KEY = os.getenv("STRIPE_PUBLISHABLE_KEY")
+STRIPE_SECRET_KEY = os.getenv("STRIPE_SECRET_KEY")
 
 
 # Plan Configuration
@@ -197,8 +200,8 @@ EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
 EMAIL_HOST = 'smtp.gmail.com'  # or your SMTP server
 EMAIL_PORT = 587
 EMAIL_USE_TLS = True
-EMAIL_HOST_USER = 'ranjitha13cs@gmail.com'  
-EMAIL_HOST_PASSWORD = 'iixy zrjl wzbc vqtk'  
+EMAIL_HOST_USER = os.getenv("EMAIL_HOST_USER")  
+EMAIL_HOST_PASSWORD = os.getenv("EMAIL_HOST_PASSWORD")  
 DEFAULT_FROM_EMAIL = 'ranjitha13cs@gmail.com'  
 
 # Email templates configuration

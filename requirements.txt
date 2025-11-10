@@ -6,3 +6,4 @@ gunicorn
 stripe
 mysqlclient
 dj-database-url
+python-dotenv
